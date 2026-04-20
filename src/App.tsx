@@ -21,6 +21,7 @@ import AdminPage from './pages/AdminPage';
 import Navbar from './components/Navbar';
 import MissingAttendanceAlert from './components/MissingAttendanceAlert';
 import LeaveRequestsPage from './pages/LeaveRequestsPage';
+import { SyncProvider } from './context/SyncContext';
 import { supabase } from './lib/supabase';
 
 export default function App() {
@@ -301,38 +302,40 @@ export default function App() {
   }
 
   return (
-    <Router>
-      <div className="min-h-screen bg-transparent flex flex-col">
-        <Navbar onLogout={handleLogout} profile={profile} />
-        <main className="flex-1 container mx-auto px-4 sm:px-6 py-10 max-w-7xl">
-          {!isLoading && <MissingAttendanceAlert students={students} profile={profile} refreshData={fetchStudents} />}
-          <Routes>
-            {(profile.role === 'faculty' || profile.role === 'admin') ? (
-              <>
-                <Route path="/" element={<DashboardPage students={students} />} />
-                <Route 
-                  path="/attendance" 
-                  element={<AttendancePage students={students} refreshData={fetchStudents} profile={profile} />} 
-                />
-                <Route path="/students" element={<StudentPage students={students} isLoading={isLoading} />} />
-                <Route path="/report" element={<ReportPage students={students} />} />
-                <Route path="/leaves" element={<LeaveRequestsPage profile={profile} />} />
-                {profile.role === 'admin' && (
-                  <Route path="/admin" element={<AdminPage refreshData={fetchStudents} />} />
-                )}
-                <Route path="*" element={<Navigate to="/" replace />} />
-              </>
-            ) : (
-              <>
-                <Route path="/" element={<StudentPage students={students.filter(s => s.rollNo === profile.roll_no)} isStudentView={true} isLoading={isLoading} />} />
-                <Route path="/leaves" element={<LeaveRequestsPage profile={profile} studentId={students.find(s => s.rollNo === profile.roll_no)?.id} />} />
-                <Route path="*" element={<Navigate to="/" replace />} />
-              </>
-            )}
-          </Routes>
-        </main>
-      </div>
-    </Router>
+    <SyncProvider>
+      <Router>
+        <div className="min-h-screen bg-transparent flex flex-col">
+          <Navbar onLogout={handleLogout} profile={profile} />
+          <main className="flex-1 container mx-auto px-4 sm:px-6 py-10 max-w-7xl">
+            {!isLoading && <MissingAttendanceAlert students={students} profile={profile} refreshData={fetchStudents} />}
+            <Routes>
+              {(profile.role === 'faculty' || profile.role === 'admin') ? (
+                <>
+                  <Route path="/" element={<DashboardPage students={students} />} />
+                  <Route 
+                    path="/attendance" 
+                    element={<AttendancePage students={students} refreshData={fetchStudents} profile={profile} />} 
+                  />
+                  <Route path="/students" element={<StudentPage students={students} isLoading={isLoading} />} />
+                  <Route path="/report" element={<ReportPage students={students} />} />
+                  <Route path="/leaves" element={<LeaveRequestsPage profile={profile} />} />
+                  {profile.role === 'admin' && (
+                    <Route path="/admin" element={<AdminPage refreshData={fetchStudents} />} />
+                  )}
+                  <Route path="*" element={<Navigate to="/" replace />} />
+                </>
+              ) : (
+                <>
+                  <Route path="/" element={<StudentPage students={students.filter(s => s.rollNo === profile.roll_no)} isStudentView={true} isLoading={isLoading} />} />
+                  <Route path="/leaves" element={<LeaveRequestsPage profile={profile} studentId={students.find(s => s.rollNo === profile.roll_no)?.id} />} />
+                  <Route path="*" element={<Navigate to="/" replace />} />
+                </>
+              )}
+            </Routes>
+          </main>
+        </div>
+      </Router>
+    </SyncProvider>
   );
 }
 
