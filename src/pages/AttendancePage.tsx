@@ -23,6 +23,7 @@ import type { Student, Profile } from '../types';
 import { cn } from '../utils/attendance';
 import { motion, AnimatePresence } from 'motion/react';
 import { supabase } from '../lib/supabase';
+import { useSearchParams } from 'react-router-dom';
 
 interface AttendancePageProps {
   students: Student[];
@@ -35,6 +36,8 @@ export default function AttendancePage({
   refreshData,
   profile,
 }: AttendancePageProps) {
+  const [searchParams, setSearchParams] = useSearchParams();
+
   const availableSubjects =
     profile.role === 'admin'
       ? SUBJECTS
@@ -92,6 +95,30 @@ export default function AttendancePage({
     document.addEventListener('mousedown', handleSubjectOutside);
     return () => document.removeEventListener('mousedown', handleSubjectOutside);
   }, []);
+
+  // Feature 3: Pre-fill form from URL query params (e.g. from "Mark Now" button)
+  useEffect(() => {
+    const qSubject = searchParams.get('subject') as SubjectId | null;
+    const qDivision = searchParams.get('division') as DivisionId | null;
+    const qDate = searchParams.get('date');
+    const qLecture = searchParams.get('lecture');
+    const qBatch = searchParams.get('batch');
+
+    if (qSubject || qDivision || qDate || qLecture) {
+      if (qSubject && availableSubjects.includes(qSubject)) {
+        setSelectedSubject(qSubject);
+      }
+      if (qDate) setDate(qDate);
+      if (qDivision && DIVISIONS.includes(qDivision)) {
+        setSelectedDivision(qDivision);
+      }
+      if (qLecture) setLectureNo(parseInt(qLecture, 10));
+      if (qBatch) setSelectedBatch(qBatch);
+
+      // Clear the query params so a page refresh doesn't re-apply them
+      setSearchParams({}, { replace: true });
+    }
+  }, []); // only on mount
 
   useEffect(() => {
     (window as any).hasUnsavedAttendanceChanges = hasUnsavedChanges;

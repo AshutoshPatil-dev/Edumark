@@ -4,7 +4,7 @@
  */
 
 import { useState, useMemo, useRef, useEffect } from 'react';
-import { Download, FileText, Search, Users, ChevronDown } from 'lucide-react';
+import { Download, FileText, Search, Users, ChevronDown, Calendar } from 'lucide-react';
 import type { Student } from '../types';
 import { SUBJECTS, DIVISIONS, type DivisionId } from '../constants';
 import { calculateTWAS, cn } from '../utils/attendance';
@@ -21,6 +21,8 @@ export default function ReportPage({ students }: ReportPageProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [isDivDropdownOpen, setIsDivDropdownOpen] = useState(false);
   const divDropdownRef = useRef<HTMLDivElement>(null);
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -42,17 +44,22 @@ export default function ReportPage({ students }: ReportPageProps) {
 
     return filteredStudents.map((student) => {
       const subjectStats = SUBJECTS.map((sub) => {
-        const records = student.attendance[sub] || [];
+        let records = student.attendance[sub] || [];
+        // Feature 5: filter records by date range
+        if (dateFrom) records = records.filter(r => r.date >= dateFrom);
+        if (dateTo) records = records.filter(r => r.date <= dateTo);
         const { score, status } = calculateTWAS(records);
         return { subject: sub, score, status, totalLectures: records.length };
       });
 
-      const allRecords = Object.values(student.attendance).flat();
+      let allRecords = Object.values(student.attendance).flat();
+      if (dateFrom) allRecords = allRecords.filter(r => r.date >= dateFrom);
+      if (dateTo) allRecords = allRecords.filter(r => r.date <= dateTo);
       const { score: avgScore, status: overallStatus } = calculateTWAS(allRecords);
 
       return { ...student, subjectStats, avgScore, overallStatus };
     });
-  }, [students, selectedDivision, searchQuery]);
+  }, [students, selectedDivision, searchQuery, dateFrom, dateTo]);
 
   const escapeCSV = (val: any) => {
     if (val === null || val === undefined) return '';
@@ -208,67 +215,107 @@ export default function ReportPage({ students }: ReportPageProps) {
 
       <div className="bg-card rounded-3xl border border-cream-border overflow-hidden">
         {/* Filter bar */}
-        <div className="p-5 border-b border-cream-border bg-paper flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
-          <div className="relative w-full md:w-56" ref={divDropdownRef}>
-            <button
-              onClick={() => setIsDivDropdownOpen(!isDivDropdownOpen)}
-              className={cn(
-                'w-full flex items-center justify-between pl-4 pr-4 py-2.5 bg-card border rounded-xl focus:outline-none transition-all',
-                isDivDropdownOpen
-                  ? 'border-ochre shadow-[0_0_0_4px_rgba(29,78,216,0.08)] ring-4 ring-ochre/10'
-                  : 'border-cream-border hover:border-ochre/50',
-              )}
-            >
-              <div className="flex items-center gap-3">
-                <Users className={cn('w-[18px] h-[18px] transition-colors', isDivDropdownOpen ? 'text-ochre' : 'text-ink/40')} />
-                <span className="font-medium text-ink">Division {selectedDivision}</span>
-              </div>
-              <ChevronDown className={cn('w-4 h-4 text-ink/40 transition-transform duration-200', isDivDropdownOpen && 'rotate-180')} />
-            </button>
+        <div className="p-5 border-b border-cream-border bg-paper flex flex-col gap-3">
+          <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
+            <div className="relative w-full md:w-56" ref={divDropdownRef}>
+              <button
+                onClick={() => setIsDivDropdownOpen(!isDivDropdownOpen)}
+                className={cn(
+                  'w-full flex items-center justify-between pl-4 pr-4 py-2.5 bg-card border rounded-xl focus:outline-none transition-all',
+                  isDivDropdownOpen
+                    ? 'border-ochre shadow-[0_0_0_4px_rgba(29,78,216,0.08)] ring-4 ring-ochre/10'
+                    : 'border-cream-border hover:border-ochre/50',
+                )}
+              >
+                <div className="flex items-center gap-3">
+                  <Users className={cn('w-[18px] h-[18px] transition-colors', isDivDropdownOpen ? 'text-ochre' : 'text-ink/40')} />
+                  <span className="font-medium text-ink">Division {selectedDivision}</span>
+                </div>
+                <ChevronDown className={cn('w-4 h-4 text-ink/40 transition-transform duration-200', isDivDropdownOpen && 'rotate-180')} />
+              </button>
 
-            <AnimatePresence>
-              {isDivDropdownOpen && (
-                <motion.div
-                  initial={{ opacity: 0, y: 8, scale: 0.98 }}
-                  animate={{ opacity: 1, y: 0, scale: 1 }}
-                  exit={{ opacity: 0, y: 8, scale: 0.98 }}
-                  transition={{ duration: 0.15, ease: 'easeOut' }}
-                  className="absolute top-full left-0 right-0 z-50 mt-2 py-2 bg-card border border-cream-border rounded-xl shadow-[0_20px_40px_-15px_rgba(0,0,0,0.12)] backdrop-blur-xl overflow-hidden"
-                >
-                  {DIVISIONS.map((div) => (
-                    <button
-                      key={div}
-                      onClick={() => {
-                        setSelectedDivision(div);
-                        setIsDivDropdownOpen(false);
-                      }}
-                      className={cn(
-                        'w-full flex items-center gap-3 px-4 py-2.5 text-[0.875rem] font-medium transition-colors',
-                        selectedDivision === div
-                          ? 'bg-ochre/10 text-ochre-deep'
-                          : 'text-ink hover:bg-cream-soft',
-                      )}
-                    >
-                      {selectedDivision === div && (
-                        <span className="w-1.5 h-1.5 rounded-full bg-ochre shrink-0" />
-                      )}
-                      <span className={selectedDivision !== div ? 'ml-[14px]' : ''}>Division {div}</span>
-                    </button>
-                  ))}
-                </motion.div>
-              )}
-            </AnimatePresence>
+              <AnimatePresence>
+                {isDivDropdownOpen && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 8, scale: 0.98 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: 8, scale: 0.98 }}
+                    transition={{ duration: 0.15, ease: 'easeOut' }}
+                    className="absolute top-full left-0 right-0 z-50 mt-2 py-2 bg-card border border-cream-border rounded-xl shadow-[0_20px_40px_-15px_rgba(0,0,0,0.12)] backdrop-blur-xl overflow-hidden"
+                  >
+                    {DIVISIONS.map((div) => (
+                      <button
+                        key={div}
+                        onClick={() => {
+                          setSelectedDivision(div);
+                          setIsDivDropdownOpen(false);
+                        }}
+                        className={cn(
+                          'w-full flex items-center gap-3 px-4 py-2.5 text-[0.875rem] font-medium transition-colors',
+                          selectedDivision === div
+                            ? 'bg-ochre/10 text-ochre-deep'
+                            : 'text-ink hover:bg-cream-soft',
+                        )}
+                      >
+                        {selectedDivision === div && (
+                          <span className="w-1.5 h-1.5 rounded-full bg-ochre shrink-0" />
+                        )}
+                        <span className={selectedDivision !== div ? 'ml-[14px]' : ''}>Division {div}</span>
+                      </button>
+                    ))}
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+
+            <div className="relative w-full md:max-w-md">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-ink/40" />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search reports…"
+                className="w-full pl-10 pr-4 py-2.5 bg-card border border-cream-border rounded-xl text-sm focus:outline-none focus:ring-4 focus:ring-ochre/10 focus:border-ochre/60 font-medium text-ink placeholder:text-ink/30"
+              />
+            </div>
           </div>
 
-          <div className="relative w-full md:max-w-md">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-ink/40" />
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search reports…"
-              className="w-full pl-10 pr-4 py-2.5 bg-card border border-cream-border rounded-xl text-sm focus:outline-none focus:ring-4 focus:ring-ochre/10 focus:border-ochre/60 font-medium text-ink placeholder:text-ink/30"
-            />
+          {/* Date Range Filter */}
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+            <div className="flex items-center gap-2 text-[0.75rem] font-semibold text-ink-muted">
+              <Calendar className="w-3.5 h-3.5 text-ochre" />
+              <span>Period</span>
+            </div>
+            <div className="flex items-center gap-2 flex-1">
+              <input
+                type="date"
+                value={dateFrom}
+                onChange={(e) => setDateFrom(e.target.value)}
+                className="flex-1 sm:max-w-[160px] px-3 py-2 bg-card border border-cream-border rounded-xl text-sm focus:outline-none focus:ring-4 focus:ring-ochre/10 focus:border-ochre/60 font-medium text-ink"
+                placeholder="From"
+              />
+              <span className="text-ink-muted text-sm">→</span>
+              <input
+                type="date"
+                value={dateTo}
+                onChange={(e) => setDateTo(e.target.value)}
+                className="flex-1 sm:max-w-[160px] px-3 py-2 bg-card border border-cream-border rounded-xl text-sm focus:outline-none focus:ring-4 focus:ring-ochre/10 focus:border-ochre/60 font-medium text-ink"
+                placeholder="To"
+              />
+            </div>
+            {(dateFrom || dateTo) && (
+              <button
+                onClick={() => { setDateFrom(''); setDateTo(''); }}
+                className="text-[0.75rem] font-semibold text-ochre-deep hover:text-ochre bg-ochre/10 hover:bg-ochre/15 px-3 py-2 rounded-lg border border-ochre/20 transition-colors"
+              >
+                Clear dates
+              </button>
+            )}
+            {(dateFrom || dateTo) && (
+              <span className="text-[0.6875rem] text-ink-muted font-medium px-2 py-1 bg-cream border border-cream-border rounded-lg">
+                {dateFrom || '…'} to {dateTo || '…'}
+              </span>
+            )}
           </div>
         </div>
 

@@ -17,6 +17,7 @@ import {
   X,
   AlertTriangle,
   UserPlus,
+  FileText,
 } from 'lucide-react';
 import { cn } from '../utils/attendance';
 import type { Profile } from '../types';
@@ -38,13 +39,17 @@ export default function Navbar({ onLogout, profile }: NavbarProps) {
     { path: '/attendance', label: 'Mark', icon: ClipboardCheck },
     { path: '/students', label: 'Students', icon: Users },
     { path: '/report', label: 'Reports', icon: FileBarChart },
+    { path: '/leaves', label: 'Leaves', icon: FileText },
   ];
 
   if (profile.role === 'admin') {
     facultyItems.push({ path: '/admin', label: 'Admin', icon: UserPlus });
   }
 
-  const studentItems = [{ path: '/', label: 'My Record', icon: Users }];
+  const studentItems = [
+    { path: '/', label: 'My Record', icon: Users },
+    { path: '/leaves', label: 'My Leaves', icon: FileText },
+  ];
 
   const navItems =
     profile.role === 'faculty' || profile.role === 'admin'

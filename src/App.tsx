@@ -20,6 +20,7 @@ import ReportPage from './pages/ReportPage';
 import AdminPage from './pages/AdminPage';
 import Navbar from './components/Navbar';
 import MissingAttendanceAlert from './components/MissingAttendanceAlert';
+import LeaveRequestsPage from './pages/LeaveRequestsPage';
 import { supabase } from './lib/supabase';
 
 export default function App() {
@@ -315,6 +316,7 @@ export default function App() {
                 />
                 <Route path="/students" element={<StudentPage students={students} isLoading={isLoading} />} />
                 <Route path="/report" element={<ReportPage students={students} />} />
+                <Route path="/leaves" element={<LeaveRequestsPage profile={profile} />} />
                 {profile.role === 'admin' && (
                   <Route path="/admin" element={<AdminPage refreshData={fetchStudents} />} />
                 )}
@@ -323,6 +325,7 @@ export default function App() {
             ) : (
               <>
                 <Route path="/" element={<StudentPage students={students.filter(s => s.rollNo === profile.roll_no)} isStudentView={true} isLoading={isLoading} />} />
+                <Route path="/leaves" element={<LeaveRequestsPage profile={profile} studentId={students.find(s => s.rollNo === profile.roll_no)?.id} />} />
                 <Route path="*" element={<Navigate to="/" replace />} />
               </>
             )}
