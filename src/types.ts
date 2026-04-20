@@ -64,7 +64,34 @@ export interface AttendanceLog {
   };
 }
 
-export type AdminLogCategory = 'attendance' | 'student' | 'timetable' | 'teacher';
+export type LeaveStatus = 'pending' | 'approved' | 'rejected';
+
+export type LeaveType = 'medical' | 'personal' | 'academic' | 'other';
+
+export interface LeaveRequest {
+  id: string;
+  student_id: string;
+  start_date: string;
+  end_date: string;
+  reason: string;
+  leave_type: LeaveType;
+  status: LeaveStatus;
+  reviewed_by?: string;
+  review_note?: string;
+  created_at: string;
+  updated_at?: string;
+  // Joined data
+  students?: {
+    name: string;
+    roll_no: string;
+    division: string;
+  };
+  reviewer?: {
+    full_name: string | null;
+  };
+}
+
+export type AdminLogCategory = 'attendance' | 'student' | 'timetable' | 'teacher' | 'leave';
 
 export interface AdminLog {
   id: string;

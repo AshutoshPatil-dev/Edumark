@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { AlertCircle, CheckCircle2, XCircle, Clock, ChevronDown, ChevronUp } from 'lucide-react';
+import { AlertCircle, CheckCircle2, XCircle, Clock, ChevronDown, ChevronUp, ClipboardCheck } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import type { Student, Profile, TimetableEntry } from '../types';
 
@@ -18,6 +19,7 @@ interface MissingEntry {
 }
 
 export default function MissingAttendanceAlert({ students, profile, refreshData }: MissingAttendanceAlertProps) {
+  const navigate = useNavigate();
   const [missingList, setMissingList] = useState<MissingEntry[]>([]);
   const [expanded, setExpanded] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -270,6 +272,22 @@ export default function MissingAttendanceAlert({ students, profile, refreshData 
                   </div>
                 </div>
                 <div className="flex flex-wrap gap-2 mt-2 sm:mt-0">
+                  <button
+                    onClick={() => {
+                      const params = new URLSearchParams({
+                        subject: m.subjectId,
+                        division: m.division,
+                        date: m.date,
+                        lecture: String(m.lectureNo),
+                      });
+                      if (m.batch) params.set('batch', m.batch);
+                      navigate(`/attendance?${params.toString()}`);
+                    }}
+                    className="flex items-center gap-1.5 text-[0.8125rem] bg-night text-white border border-night px-3.5 py-2 rounded-xl hover:bg-night-soft font-semibold"
+                  >
+                    <ClipboardCheck className="w-3.5 h-3.5" />
+                    <span>Mark now</span>
+                  </button>
                   <button
                     onClick={() => handleMarkAllPresent(m)}
                     disabled={isLoading}

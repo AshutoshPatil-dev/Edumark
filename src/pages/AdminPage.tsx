@@ -245,6 +245,7 @@ export default function AdminPage({ refreshData }: AdminPageProps) {
     { id: 'student', label: 'Students', icon: Users },
     { id: 'timetable', label: 'Timetable', icon: Calendar },
     { id: 'teacher', label: 'Teachers', icon: UserPlus },
+    { id: 'leave', label: 'Leaves', icon: FileText },
   ];
 
   const categoryBadge: Record<string, string> = {
@@ -252,6 +253,7 @@ export default function AdminPage({ refreshData }: AdminPageProps) {
     student: 'bg-sky-50 dark:bg-sky-900/20 text-sky-700 border-sky-200',
     timetable: 'bg-violet-50 dark:bg-violet-900/20 text-violet-700 border-violet-200',
     teacher: 'bg-amber-50 dark:bg-amber-900/20 text-amber-700 border-amber-200',
+    leave: 'bg-cyan-50 dark:bg-cyan-900/20 text-cyan-700 border-cyan-200',
   };
 
   return (
