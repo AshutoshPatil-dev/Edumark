@@ -19,7 +19,11 @@ import {
   AlertTriangle,
   UserPlus,
   FileText,
+  Cloud,
+  CloudOff,
+  RefreshCw,
 } from 'lucide-react';
+import { useSync } from '../context/SyncContext';
 import { cn } from '../utils/attendance';
 import type { Profile } from '../types';
 import EdumarkLogo from './EdumarkLogo';
@@ -32,6 +36,7 @@ interface NavbarProps {
 export default function Navbar({ onLogout, profile }: NavbarProps) {
   const { theme } = useTheme();
   const { institution } = useInstitution();
+  const { isOnline, pendingCount, syncNow } = useSync();
   const location = useLocation();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
@@ -152,6 +157,31 @@ export default function Navbar({ onLogout, profile }: NavbarProps) {
             </div>
 
             <div className="flex items-center gap-1 sm:gap-2 md:gap-3">
+              {/* Sync Status Indicator */}
+              <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-paper/50 border border-cream-border/50 mr-1">
+                {isOnline ? (
+                  <div className="flex items-center gap-2">
+                    {pendingCount > 0 ? (
+                      <button 
+                        onClick={() => syncNow()}
+                        className="flex items-center gap-1.5 text-ochre hover:text-ochre-deep transition-colors"
+                        title={`${pendingCount} records pending sync`}
+                      >
+                        <RefreshCw className="w-3.5 h-3.5 animate-spin-slow" />
+                        <span className="text-[0.65rem] font-bold tabular-nums">{pendingCount}</span>
+                      </button>
+                    ) : (
+                      <Cloud className="w-3.5 h-3.5 text-emerald-500" title="All data synced" />
+                    )}
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-1.5 text-rose-500" title="You are offline. Changes saved locally.">
+                    <CloudOff className="w-3.5 h-3.5" />
+                    {pendingCount > 0 && <span className="text-[0.65rem] font-bold tabular-nums">{pendingCount}</span>}
+                  </div>
+                )}
+              </div>
+
               <ThemeToggle className="shrink-0" />
               <div className="hidden sm:flex items-center gap-3 px-3 py-1.5 rounded-xl hover:bg-cream-soft transition-colors cursor-pointer">
                 <div className="text-right">

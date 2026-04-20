@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { useInstitution } from '../context/InstitutionContext';
 import type { Student, Profile, TimetableEntry } from '../types';
+import { useSync } from '../context/SyncContext';
 
 interface MissingAttendanceAlertProps {
   students: Student[];
@@ -22,6 +23,7 @@ interface MissingEntry {
 export default function MissingAttendanceAlert({ students, profile, refreshData }: MissingAttendanceAlertProps) {
   const navigate = useNavigate();
   const { institutionId, scopeQuery } = useInstitution();
+  const { isOnline, addToQueue } = useSync();
   const [missingList, setMissingList] = useState<MissingEntry[]>([]);
   const [expanded, setExpanded] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -164,18 +166,32 @@ export default function MissingAttendanceAlert({ students, profile, refreshData 
 
   const handleLogAction = async (entry: MissingEntry, action: string) => {
     setIsLoading(true);
+    const details = [
+      entry.subjectId,
+      `Div ${entry.division}`,
+      entry.batch ? `Batch ${entry.batch}` : null,
+      `Lecture ${entry.lectureNo}`,
+      entry.date,
+    ].filter(Boolean).join(' · ');
+
+    if (!isOnline) {
+      await addToQueue('admin_logs', {
+        actor_id: profile.id,
+        category: 'attendance',
+        action: action,
+        details: details,
+      });
+      setMissingList(prev => prev.filter(m => !(m.date === entry.date && m.subjectId === entry.subjectId && m.division === entry.division && m.lectureNo === entry.lectureNo && m.batch === entry.batch)));
+      setIsLoading(false);
+      return;
+    }
+
     try {
       const { error } = await supabase.from('admin_logs').insert({
         actor_id: profile.id,
         category: 'attendance',
         action: action,
-        details: [
-          entry.subjectId,
-          `Div ${entry.division}`,
-          entry.batch ? `Batch ${entry.batch}` : null,
-          `Lecture ${entry.lectureNo}`,
-          entry.date,
-        ].filter(Boolean).join(' · '),
+        details: details,
         institution_id: institutionId,
       });
 
@@ -203,6 +219,19 @@ export default function MissingAttendanceAlert({ students, profile, refreshData 
         marked_by: profile.id,
         institution_id: institutionId
       }));
+
+      if (!isOnline) {
+        await addToQueue('attendance', records);
+        const key = `${entry.date}_${entry.subjectId}_${entry.division}_${entry.lectureNo}_${entry.batch || ''}`;
+        const ignored = JSON.parse(localStorage.getItem(`edumark_ignored_attendance_${profile.id}`) || '[]');
+        if (!ignored.includes(key)) {
+          ignored.push(key);
+          localStorage.setItem(`edumark_ignored_attendance_${profile.id}`, JSON.stringify(ignored));
+        }
+        setMissingList(prev => prev.filter(m => !(m.date === entry.date && m.subjectId === entry.subjectId && m.division === entry.division && m.lectureNo === entry.lectureNo && m.batch === entry.batch)));
+        setIsLoading(false);
+        return;
+      }
 
       const { error } = await supabase.from('attendance').upsert(records, {
         onConflict: 'student_id, subject, date, lecture_no'
