@@ -9,20 +9,23 @@
  */
 
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, lazy, Suspense } from 'react';
 import { AlertCircle } from 'lucide-react';
 import type { Student, Profile } from './types';
 import LoginPage from './pages/LoginPage';
 import DashboardPage from './pages/DashboardPage';
 import AttendancePage from './pages/AttendancePage';
 import StudentPage from './pages/StudentPage';
-import ReportPage from './pages/ReportPage';
-import AdminPage from './pages/AdminPage';
 import Navbar from './components/Navbar';
 import MissingAttendanceAlert from './components/MissingAttendanceAlert';
-import LeaveRequestsPage from './pages/LeaveRequestsPage';
 import { SyncProvider } from './context/SyncContext';
 import { supabase } from './lib/supabase';
+
+// Lazy load heavy pages
+const ReportPage = lazy(() => import('./pages/ReportPage'));
+const AdminPage = lazy(() => import('./pages/AdminPage'));
+const LeaveRequestsPage = lazy(() => import('./pages/LeaveRequestsPage'));
+
 
 export default function App() {
   const [students, setStudents] = useState<Student[]>([]);
@@ -315,30 +318,36 @@ export default function App() {
           <Navbar onLogout={handleLogout} profile={profile} />
           <main className="flex-1 container mx-auto px-4 sm:px-6 py-10 max-w-7xl">
             {!isLoading && <MissingAttendanceAlert students={students} profile={profile} refreshData={fetchStudents} />}
-            <Routes>
-              {(profile.role === 'faculty' || profile.role === 'admin') ? (
-                <>
-                  <Route path="/" element={<DashboardPage students={students} />} />
-                  <Route 
-                    path="/attendance" 
-                    element={<AttendancePage students={students} refreshData={fetchStudents} profile={profile} />} 
-                  />
-                  <Route path="/students" element={<StudentPage students={students} isLoading={isLoading} />} />
-                  <Route path="/report" element={<ReportPage students={students} />} />
-                  <Route path="/leaves" element={<LeaveRequestsPage profile={profile} />} />
-                  {profile.role === 'admin' && (
-                    <Route path="/admin" element={<AdminPage refreshData={fetchStudents} />} />
-                  )}
-                  <Route path="*" element={<Navigate to="/" replace />} />
-                </>
-              ) : (
-                <>
-                  <Route path="/" element={<StudentPage students={students.filter(s => s.rollNo === profile.roll_no)} isStudentView={true} isLoading={isLoading} />} />
-                  <Route path="/leaves" element={<LeaveRequestsPage profile={profile} studentId={students.find(s => s.rollNo === profile.roll_no)?.id} />} />
-                  <Route path="*" element={<Navigate to="/" replace />} />
-                </>
-              )}
-            </Routes>
+            <Suspense fallback={
+              <div className="flex items-center justify-center py-20">
+                <div className="w-8 h-8 border-[3px] border-ink/15 border-t-ochre rounded-full animate-spin" />
+              </div>
+            }>
+              <Routes>
+                {(profile.role === 'faculty' || profile.role === 'admin') ? (
+                  <>
+                    <Route path="/" element={<DashboardPage students={students} />} />
+                    <Route 
+                      path="/attendance" 
+                      element={<AttendancePage students={students} refreshData={fetchStudents} profile={profile} />} 
+                    />
+                    <Route path="/students" element={<StudentPage students={students} isLoading={isLoading} />} />
+                    <Route path="/report" element={<ReportPage students={students} />} />
+                    <Route path="/leaves" element={<LeaveRequestsPage profile={profile} />} />
+                    {profile.role === 'admin' && (
+                      <Route path="/admin" element={<AdminPage refreshData={fetchStudents} />} />
+                    )}
+                    <Route path="*" element={<Navigate to="/" replace />} />
+                  </>
+                ) : (
+                  <>
+                    <Route path="/" element={<StudentPage students={students.filter(s => s.rollNo === profile.roll_no)} isStudentView={true} isLoading={isLoading} />} />
+                    <Route path="/leaves" element={<LeaveRequestsPage profile={profile} studentId={students.find(s => s.rollNo === profile.roll_no)?.id} />} />
+                    <Route path="*" element={<Navigate to="/" replace />} />
+                  </>
+                )}
+              </Routes>
+            </Suspense>
           </main>
         </div>
       </Router>
