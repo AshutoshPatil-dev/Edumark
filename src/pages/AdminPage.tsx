@@ -71,8 +71,6 @@ export default function AdminPage({ refreshData }: AdminPageProps) {
 
   const [allProfiles, setAllProfiles] = useState<Profile[]>([]);
   const [isLoadingProfiles, setIsLoadingProfiles] = useState(false);
-  const [studentTab, setStudentTab] = useState<'single' | 'bulk'>('single');
-  const [timetableTab, setTimetableTab] = useState<'visual' | 'csv'>('visual');
 
   const [name, setName] = useState('');
   const [rollNo, setRollNo] = useState('');

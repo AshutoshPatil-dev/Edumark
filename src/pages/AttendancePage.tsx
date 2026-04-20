@@ -81,7 +81,8 @@ export default function AttendancePage({
   const [selectedBatch, setSelectedBatch] = useState<string>('');
   const [validBatches, setValidBatches] = useState<string[]>([]);
   const [validLectures, setValidLectures] = useState<number[]>([1, 2, 3, 4, 5, 6]);
-  const [, setIsLoadingAttendance] = useState(false);
+  const [isLoadingAttendance, setIsLoadingAttendance] = useState(false);
+  const [isOfflineSaved, setIsOfflineSaved] = useState(false);
 
   const [quickEntryInput, setQuickEntryInput] = useState('');
   const [quickEntryError, setQuickEntryError] = useState<string | null>(null);
@@ -781,7 +782,13 @@ export default function AttendancePage({
             />
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3 relative min-h-[200px]">
+            {isLoadingAttendance ? (
+              <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 bg-paper/50 backdrop-blur-[2px] rounded-2xl z-20">
+                <div className="w-10 h-10 border-4 border-ochre/20 border-t-ochre rounded-full animate-spin" />
+                <p className="text-ink-muted text-sm font-medium">Fetching records...</p>
+              </div>
+            ) : null}
             {filteredStudents.map((student) => {
               const isAbsent = absenteeIds.has(student.id);
               return (
