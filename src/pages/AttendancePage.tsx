@@ -73,7 +73,6 @@ export default function AttendancePage({
   const [searchQuery, setSearchQuery] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
-  const [isOfflineSaved, setIsOfflineSaved] = useState(false);
   const [justSaved, setJustSaved] = useState(false);
   const [showQuickEntry, setShowQuickEntry] = useState(false);
 
@@ -491,8 +490,6 @@ export default function AttendancePage({
     if (!error) {
       setInitialAbsenteeIds(new Set(absenteeIds));
       setInitialRemarks({ ...remarks });
-      setIsOfflineSaved(false);
-      
       // Write to unified admin log
       await supabase.from('admin_logs').insert({
         actor_id: profile.id,
@@ -568,19 +565,10 @@ export default function AttendancePage({
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}
-            className={cn(
-              "p-4 rounded-2xl flex items-center justify-center gap-3 font-medium border",
-              isOfflineSaved 
-                ? "bg-amber-50 text-amber-800 border-amber-200" 
-                : "bg-night text-white border-night"
-            )}
+            className="bg-night text-white p-4 rounded-2xl flex items-center justify-center gap-3 font-medium"
           >
-            <span className={cn("w-1.5 h-1.5 rounded-full", isOfflineSaved ? "bg-amber-500" : "bg-ochre")} />
-            <span>
-              {isOfflineSaved 
-                ? "Saved locally — data will sync when you're back online." 
-                : "Saved — your attendance is on record."}
-            </span>
+            <span className="w-1.5 h-1.5 rounded-full bg-ochre" />
+            <span>Saved — your attendance is on record.</span>
           </motion.div>
         )}
       </AnimatePresence>

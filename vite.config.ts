@@ -52,7 +52,7 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['pwa-192.png', 'pwa-512.png'],
       manifest: {
-        name: 'Edumark — Class Attendance',
+        name: 'Edumark - Class Attendance',
         short_name: 'Edumark',
         description: 'Faculty attendance and student management ERP',
         theme_color: '#0070f3',

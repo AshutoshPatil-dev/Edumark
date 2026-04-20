@@ -9,15 +9,13 @@
  */
 
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, lazy, Suspense } from 'react';
 import { AlertCircle } from 'lucide-react';
 import type { Student, Profile } from './types';
 import LoginPage from './pages/LoginPage';
 import DashboardPage from './pages/DashboardPage';
 import AttendancePage from './pages/AttendancePage';
 import StudentPage from './pages/StudentPage';
-import ReportPage from './pages/ReportPage';
-import AdminPage from './pages/AdminPage';
 import Navbar from './components/Navbar';
 import MissingAttendanceAlert from './components/MissingAttendanceAlert';
 import LeaveRequestsPage from './pages/LeaveRequestsPage';
@@ -25,6 +23,11 @@ import InstitutionOnboarding from './pages/InstitutionOnboarding';
 import { InstitutionProvider } from './context/InstitutionContext';
 import { SyncProvider } from './context/SyncContext';
 import { supabase } from './lib/supabase';
+
+// Lazy load heavy pages
+const ReportPage = lazy(() => import('./pages/ReportPage'));
+const AdminPage = lazy(() => import('./pages/AdminPage'));
+
 
 export default function App() {
   const [students, setStudents] = useState<Student[]>([]);
@@ -204,7 +207,7 @@ export default function App() {
     if (!isLoggedIn) return;
 
     let timeoutId: NodeJS.Timeout;
-    const INACTIVITY_LIMIT = 15 * 60 * 1000;
+    const INACTIVITY_LIMIT = 15 * 60 * 1000; // 15 minutes in milliseconds
     const STORAGE_KEY = 'edumark_last_activity';
 
     const checkTimeout = () => {
@@ -212,14 +215,9 @@ export default function App() {
       if (lastActivity) {
         const elapsed = Date.now() - parseInt(lastActivity, 10);
         if (elapsed >= INACTIVITY_LIMIT) {
-          // Defer logout if offline to prevent locking user out
-          if (navigator.onLine) {
-            handleLogout();
-            alert('You have been automatically logged out due to inactivity.');
-            return true;
-          } else {
-            console.log('Inactivity limit reached, but offline. Deferring logout.');
-          }
+          handleLogout();
+          alert('You have been automatically logged out due to inactivity.');
+          return true;
         }
       }
       return false;
@@ -231,12 +229,18 @@ export default function App() {
       localStorage.setItem(STORAGE_KEY, Date.now().toString());
       clearTimeout(timeoutId);
       timeoutId = setTimeout(() => {
-        checkTimeout();
+        if (!checkTimeout()) {
+          // If checkTimeout didn't log out (e.g. limit changed), force it
+          handleLogout();
+          alert('You have been automatically logged out due to inactivity.');
+        }
       }, INACTIVITY_LIMIT);
     };
 
+    // Initialize timer and check for existing timeout
     resetTimer();
 
+    // Events to track for activity
     const events = ['mousedown', 'mousemove', 'keydown', 'scroll', 'touchstart', 'touchmove', 'touchend'];
     
     let isThrottled = false;
@@ -244,7 +248,7 @@ export default function App() {
       if (!isThrottled) {
         resetTimer();
         isThrottled = true;
-        setTimeout(() => { isThrottled = false; }, 1000);
+        setTimeout(() => { isThrottled = false; }, 1000); // Throttle to once per second
       }
     };
 
@@ -340,30 +344,36 @@ export default function App() {
             <Navbar onLogout={handleLogout} profile={profile} />
             <main className="flex-1 container mx-auto px-4 sm:px-6 py-10 max-w-7xl">
               {!isLoading && <MissingAttendanceAlert students={students} profile={profile} refreshData={fetchStudents} />}
-              <Routes>
-                {(profile.role === 'faculty' || profile.role === 'admin') ? (
-                  <>
-                    <Route path="/" element={<DashboardPage students={students} />} />
-                    <Route 
-                      path="/attendance" 
-                      element={<AttendancePage students={students} refreshData={fetchStudents} profile={profile} />} 
-                    />
-                    <Route path="/students" element={<StudentPage students={students} isLoading={isLoading} />} />
-                    <Route path="/report" element={<ReportPage students={students} />} />
-                    <Route path="/leaves" element={<LeaveRequestsPage profile={profile} />} />
-                    {profile.role === 'admin' && (
-                      <Route path="/admin" element={<AdminPage refreshData={fetchStudents} />} />
-                    )}
-                    <Route path="*" element={<Navigate to="/" replace />} />
-                  </>
-                ) : (
-                  <>
-                    <Route path="/" element={<StudentPage students={students.filter(s => s.rollNo === profile.roll_no)} isStudentView={true} isLoading={isLoading} />} />
-                    <Route path="/leaves" element={<LeaveRequestsPage profile={profile} studentId={students.find(s => s.rollNo === profile.roll_no)?.id} />} />
-                    <Route path="*" element={<Navigate to="/" replace />} />
-                  </>
-                )}
-              </Routes>
+              <Suspense fallback={
+                <div className="flex items-center justify-center py-20">
+                  <div className="w-8 h-8 border-[3px] border-ink/15 border-t-ochre rounded-full animate-spin" />
+                </div>
+              }>
+                <Routes>
+                  {(profile.role === 'faculty' || profile.role === 'admin') ? (
+                    <>
+                      <Route path="/" element={<DashboardPage students={students} />} />
+                      <Route 
+                        path="/attendance" 
+                        element={<AttendancePage students={students} refreshData={fetchStudents} profile={profile} />} 
+                      />
+                      <Route path="/students" element={<StudentPage students={students} isLoading={isLoading} />} />
+                      <Route path="/report" element={<ReportPage students={students} />} />
+                      <Route path="/leaves" element={<LeaveRequestsPage profile={profile} />} />
+                      {profile.role === 'admin' && (
+                        <Route path="/admin" element={<AdminPage refreshData={fetchStudents} />} />
+                      )}
+                      <Route path="*" element={<Navigate to="/" replace />} />
+                    </>
+                  ) : (
+                    <>
+                      <Route path="/" element={<StudentPage students={students.filter(s => s.rollNo === profile.roll_no)} isStudentView={true} isLoading={isLoading} />} />
+                      <Route path="/leaves" element={<LeaveRequestsPage profile={profile} studentId={students.find(s => s.rollNo === profile.roll_no)?.id} />} />
+                      <Route path="*" element={<Navigate to="/" replace />} />
+                    </>
+                  )}
+                </Routes>
+              </Suspense>
             </main>
           </div>
         </Router>
@@ -371,4 +381,5 @@ export default function App() {
     </SyncProvider>
   );
 }
+
 

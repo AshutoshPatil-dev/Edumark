@@ -91,7 +91,8 @@ export default function AdminTimetableEditor() {
         <select
           value={selectedDivision}
           onChange={(e) => setSelectedDivision(e.target.value as DivisionId)}
-          className="bg-paper border border-cream-border text-ink rounded-lg px-3 py-2 font-medium focus:outline-none focus:ring-2 focus:ring-ochre/20"
+          className="w-full sm:w-auto p-2.5 bg-paper border border-cream-border rounded-xl outline-none focus:ring-4 focus:ring-ochre/10 focus:border-ochre/60 font-medium text-ink transition-all cursor-pointer appearance-none px-4 pr-10 relative"
+          style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='currentColor'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E")`, backgroundRepeat: 'no-repeat', backgroundPosition: 'right 0.75rem center', backgroundSize: '1rem' }}
         >
           {DIVISIONS.map(d => <option key={d} value={d}>Division {d}</option>)}
         </select>
@@ -101,30 +102,30 @@ export default function AdminTimetableEditor() {
         <table className="w-full text-left border-collapse min-w-[800px]">
           <thead>
             <tr>
-              <th className="w-20 p-3 bg-paper border-b border-r border-cream-border text-center text-xs font-semibold uppercase tracking-wider text-ink-muted">
-                Lecture
+              <th className="w-32 p-3 bg-paper border-b border-r border-cream-border text-center text-xs font-semibold uppercase tracking-wider text-ink-muted">
+                Day
               </th>
-              {days.map((day, i) => (
-                <th key={day} className="p-3 bg-paper border-b border-cream-border text-center text-xs font-semibold uppercase tracking-wider text-ink-muted">
-                  {day}
+              {Array.from({ length: maxLectures }).map((_, i) => (
+                <th key={i} className="p-3 bg-paper border-b border-cream-border text-center text-xs font-semibold uppercase tracking-wider text-ink-muted">
+                  Lecture {i + 1}
                 </th>
               ))}
             </tr>
           </thead>
           <tbody>
-            {Array.from({ length: maxLectures }).map((_, r) => {
-              const lectureNo = r + 1;
+            {days.map((day, r) => {
+              const dayNum = r + 1;
               return (
-                <tr key={lectureNo}>
-                  <td className="p-3 border-r border-b border-cream-border text-center font-medium text-ink-muted bg-paper/50">
-                    L{lectureNo}
+                <tr key={day}>
+                  <td className="p-3 border-r border-b border-cream-border text-center font-bold text-ink-muted bg-paper/50">
+                    {day}
                   </td>
-                  {days.map((_, c) => {
-                    const dayNum = c + 1;
+                  {Array.from({ length: maxLectures }).map((_, c) => {
+                    const lectureNo = c + 1;
                     const slot = timetable.find(t => t.day_of_week === dayNum && t.lecture_no === lectureNo);
                     
                     return (
-                      <td key={dayNum} className="p-2 border-b border-cream-border">
+                      <td key={lectureNo} className="p-2 border-b border-cream-border">
                         {slot ? (
                           <div 
                             onClick={() => handleCellClick(dayNum, lectureNo, slot)}
