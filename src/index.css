@@ -48,12 +48,10 @@
   --radius-xl: 0.5rem;
   --radius-2xl: 0.75rem;
   --radius-3xl: 1rem;
+}
 
-  @keyframes spin-slow {
-    from { transform: rotate(0deg); }
-    to { transform: rotate(360deg); }
-  }
-  --animation-spin-slow: spin-slow 3s linear infinite;
+@utility animate-spin-slow {
+  animation: spin 3s linear infinite;
 }
 
 @layer base {

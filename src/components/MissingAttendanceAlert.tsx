@@ -164,26 +164,6 @@ export default function MissingAttendanceAlert({ students, profile, refreshData 
 
   const handleLogAction = async (entry: MissingEntry, action: string) => {
     setIsLoading(true);
-    const details = [
-      entry.subjectId,
-      `Div ${entry.division}`,
-      entry.batch ? `Batch ${entry.batch}` : null,
-      `Lecture ${entry.lectureNo}`,
-      entry.date,
-    ].filter(Boolean).join(' · ');
-
-    if (!isOnline) {
-      await addToQueue('admin_logs', {
-        actor_id: profile.id,
-        category: 'attendance',
-        action: action,
-        details: details,
-      });
-      setMissingList(prev => prev.filter(m => !(m.date === entry.date && m.subjectId === entry.subjectId && m.division === entry.division && m.lectureNo === entry.lectureNo && m.batch === entry.batch)));
-      setIsLoading(false);
-      return;
-    }
-
     try {
       const { error } = await supabase.from('admin_logs').insert({
         actor_id: profile.id,
