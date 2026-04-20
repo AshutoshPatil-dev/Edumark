@@ -9,12 +9,20 @@ import {
   Users,
   ClipboardList,
   Filter,
+  Building2,
+  Shield,
+  Briefcase,
+  Mail,
+  MapPin,
+  Save,
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
+import { useInstitution } from '../context/InstitutionContext';
 import { DIVISIONS, type DivisionId } from '../constants';
 import { cn } from '../utils/attendance';
-import type { AdminLog, AdminLogCategory } from '../types';
+import type { AdminLog, AdminLogCategory, Profile } from '../types';
 import AdminTimetableEditor from '../components/AdminTimetableEditor';
+import { motion, AnimatePresence } from 'motion/react';
 
 function getDivisionFromRollNo(rollNo: string): DivisionId {
   if (rollNo && rollNo.length >= 5) {
@@ -35,12 +43,14 @@ async function writeAdminLog(
   category: AdminLogCategory,
   action: string,
   details?: string,
+  institution_id?: string | null,
 ) {
   await supabase.from('admin_logs').insert({
     actor_id: actorId,
     category,
     action,
     details: details || null,
+    institution_id,
   });
 }
 
@@ -49,7 +59,18 @@ interface AdminPageProps {
 }
 
 export default function AdminPage({ refreshData }: AdminPageProps) {
-  const [mainTab, setMainTab] = useState<'students' | 'timetable' | 'logs'>('students');
+  const { institution, institutionId, scopeQuery } = useInstitution();
+  const [mainTab, setMainTab] = useState<'students' | 'timetable' | 'staff' | 'logs' | 'institution'>('students');
+  const [studentTab, setStudentTab] = useState<'single' | 'bulk'>('single');
+  const [timetableTab, setTimetableTab] = useState<'visual' | 'csv'>('visual');
+
+  const [institutionName, setInstitutionName] = useState('');
+  const [institutionLogo, setInstitutionLogo] = useState('');
+  const [institutionAddress, setInstitutionAddress] = useState('');
+  const [institutionEmail, setInstitutionEmail] = useState('');
+
+  const [allProfiles, setAllProfiles] = useState<Profile[]>([]);
+  const [isLoadingProfiles, setIsLoadingProfiles] = useState(false);
   const [studentTab, setStudentTab] = useState<'single' | 'bulk'>('single');
   const [timetableTab, setTimetableTab] = useState<'visual' | 'csv'>('visual');
 
@@ -83,6 +104,8 @@ export default function AdminPage({ refreshData }: AdminPageProps) {
       query = query.eq('category', logCategory);
     }
 
+    query = scopeQuery(query);
+
     const { data } = await query;
     setLogs((data as AdminLog[]) ?? []);
     setIsLoadingLogs(false);
@@ -91,6 +114,68 @@ export default function AdminPage({ refreshData }: AdminPageProps) {
   useEffect(() => {
     if (mainTab === 'logs') fetchLogs();
   }, [mainTab, fetchLogs]);
+
+  const fetchProfiles = useCallback(async () => {
+    setIsLoadingProfiles(true);
+    const { data } = await scopeQuery(supabase.from('profiles').select('*'));
+    setAllProfiles((data as Profile[]) ?? []);
+    setIsLoadingProfiles(false);
+  }, [scopeQuery]);
+
+  useEffect(() => {
+    if (mainTab === 'staff') fetchProfiles();
+  }, [mainTab, fetchProfiles]);
+
+  useEffect(() => {
+    if (institution) {
+      setInstitutionName(institution.name);
+      setInstitutionLogo(institution.logo_url || '');
+      setInstitutionAddress(institution.address || '');
+      setInstitutionEmail(institution.contact_email || '');
+    }
+  }, [institution]);
+
+  const handleRoleChange = async (targetProfileId: string, newRole: 'faculty' | 'admin') => {
+    const { error } = await supabase
+      .from('profiles')
+      .update({ role: newRole })
+      .eq('id', targetProfileId);
+    
+    if (!error) {
+      const actorId = await getCurrentUserId();
+      if (actorId) {
+        const p = allProfiles.find(ap => ap.id === targetProfileId);
+        await writeAdminLog(actorId, 'teacher', `Updated role for ${p?.full_name || 'user'}`, `New role: ${newRole}`, institutionId);
+      }
+      fetchProfiles();
+      setMessage({ type: 'success', text: 'Role updated successfully.' });
+    }
+  };
+
+  const handleInstitutionUpdate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+    const { error } = await supabase
+      .from('institutions')
+      .update({
+        name: institutionName,
+        logo_url: institutionLogo,
+        address: institutionAddress,
+        contact_email: institutionEmail
+      })
+      .eq('id', institutionId);
+    
+    if (!error) {
+      const actorId = await getCurrentUserId();
+      if (actorId) {
+        await writeAdminLog(actorId, 'timetable', 'Updated institution settings', `New name: ${institutionName}`, institutionId);
+      }
+      setMessage({ type: 'success', text: 'Institution updated successfully. Refresh to see changes.' });
+    } else {
+      setMessage({ type: 'error', text: error.message || 'Failed to update institution.' });
+    }
+    setIsLoading(false);
+  };
 
   const getCurrentUserId = async (): Promise<string | null> => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -105,7 +190,7 @@ export default function AdminPage({ refreshData }: AdminPageProps) {
       const division = getDivisionFromRollNo(rollNo);
       const { error } = await supabase
         .from('students')
-        .upsert([{ name, roll_no: rollNo, division, batch: batch || null }], {
+        .upsert([{ name, roll_no: rollNo, division, batch: batch || null, institution_id: institutionId }], {
           onConflict: 'roll_no',
         });
       if (error) throw error;
@@ -117,6 +202,7 @@ export default function AdminPage({ refreshData }: AdminPageProps) {
           'student',
           'Added student',
           `${name} (${rollNo}) → Division ${division}${batch ? `, Batch ${batch}` : ''}`,
+          institutionId,
         );
       }
 
@@ -149,7 +235,7 @@ export default function AdminPage({ refreshData }: AdminPageProps) {
         if (parts.length < 2) throw new Error(`Invalid format on line ${index + 1}. Expected: Name, RollNo, Batch(optional)`);
         const [n, r, b] = parts;
         const d = getDivisionFromRollNo(r);
-        return { name: n, roll_no: r, division: d, batch: b || null };
+        return { name: n, roll_no: r, division: d, batch: b || null, institution_id: institutionId };
       });
 
       const { error } = await supabase.from('students').upsert(studentsToInsert, { onConflict: 'roll_no' });
@@ -162,6 +248,7 @@ export default function AdminPage({ refreshData }: AdminPageProps) {
           'student',
           'Bulk added students',
           `${studentsToInsert.length} students uploaded via CSV`,
+          institutionId,
         );
       }
 
@@ -183,10 +270,10 @@ export default function AdminPage({ refreshData }: AdminPageProps) {
       const { data: { user } } = await supabase.auth.getUser();
       const fallbackId = user?.id;
 
-      const { data: profiles, error: profileError } = await supabase
+      const { data: profiles, error: profileError } = await scopeQuery(supabase
         .from('profiles')
         .select('id, full_name')
-        .in('role', ['faculty', 'admin']);
+        .in('role', ['faculty', 'admin']));
       if (profileError) throw profileError;
 
       const profileMap = new Map((profiles || []).map((p) => [(p.full_name || '').toLowerCase(), p.id]));
@@ -209,7 +296,7 @@ export default function AdminPage({ refreshData }: AdminPageProps) {
           if (!fallbackId) throw new Error(`Faculty name "${facultyName}" not found on line ${index + 1}.`);
           facultyId = fallbackId;
         }
-        return { day_of_week: day, subject_id: subject, division, faculty_id: facultyId, lecture_no: lectureNo, batch: b || null };
+        return { day_of_week: day, subject_id: subject, division, faculty_id: facultyId, lecture_no: lectureNo, batch: b || null, institution_id: institutionId };
       });
 
       const { error } = await supabase.from('timetable').insert(timetableToInsert);
@@ -221,6 +308,7 @@ export default function AdminPage({ refreshData }: AdminPageProps) {
           'timetable',
           'Uploaded timetable',
           `${timetableToInsert.length} entries added`,
+          institutionId,
         );
       }
 
@@ -236,7 +324,9 @@ export default function AdminPage({ refreshData }: AdminPageProps) {
   const tabs = [
     { id: 'students' as const, label: 'Students', icon: UserPlus },
     { id: 'timetable' as const, label: 'Timetable', icon: Calendar },
+    { id: 'staff' as const, label: 'Staff', icon: Users },
     { id: 'logs' as const, label: 'Activity Log', icon: FileText },
+    { id: 'institution' as const, label: 'Institution', icon: Building2 },
   ];
 
   const categoryFilters: { id: AdminLogCategory | 'all'; label: string; icon: React.ElementType }[] = [
@@ -501,6 +591,124 @@ export default function AdminPage({ refreshData }: AdminPageProps) {
               </table>
             </div>
           )
+        )}
+
+        {/* Staff Management */}
+        {mainTab === 'staff' && (
+          isLoadingProfiles ? (
+            <div className="flex items-center justify-center py-16">
+              <div className="w-6 h-6 border-2 border-ink/10 border-t-ochre rounded-full animate-spin" />
+            </div>
+          ) : (
+            <div className="space-y-6">
+              <div className="bg-paper p-4 rounded-2xl border border-cream-border flex items-center gap-3">
+                <AlertCircle className="w-5 h-5 text-ochre" />
+                <p className="text-sm text-ink-muted">
+                  New staff members will automatically appear here when they sign up with your institution. Use the "Role" toggle to grant Admin privileges.
+                </p>
+              </div>
+              
+              <div className="overflow-x-auto">
+                <table className="w-full text-left border-collapse">
+                  <thead>
+                    <tr className="border-b border-cream-border">
+                      <th className="px-4 py-3 eyebrow">Staff Member</th>
+                      <th className="px-4 py-3 eyebrow">Role</th>
+                      <th className="px-4 py-3 eyebrow text-right">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-cream-border">
+                    {allProfiles.map((p) => (
+                      <tr key={p.id} className="hover:bg-paper transition-colors group">
+                        <td className="px-4 py-4">
+                          <div className="flex items-center gap-3">
+                            <div className="w-9 h-9 rounded-full bg-cream border border-cream-border flex items-center justify-center text-ink font-bold text-xs">
+                              {p.full_name?.charAt(0) || 'U'}
+                            </div>
+                            <div>
+                              <p className="font-semibold text-ink leading-tight">{p.full_name || 'Unknown User'}</p>
+                              <p className="text-[0.6875rem] text-ink-muted mt-0.5 font-mono">{p.id.slice(0, 8)}</p>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-4 py-4">
+                          <span className={cn('px-2.5 py-1 rounded-full text-[0.625rem] font-bold uppercase tracking-wider border', 
+                            p.role === 'admin' ? 'bg-night text-white border-night' : 'bg-ochre/10 text-ochre-deep border-ochre/20'
+                          )}>
+                            {p.role}
+                          </span>
+                        </td>
+                        <td className="px-4 py-4 text-right">
+                          <button
+                            onClick={() => handleRoleChange(p.id, p.role === 'admin' ? 'faculty' : 'admin')}
+                            className="text-xs font-bold text-ochre hover:text-ochre-deep px-3 py-1.5 rounded-lg border border-ochre/20 hover:bg-ochre/5 transition-all"
+                          >
+                            Set as {p.role === 'admin' ? 'Faculty' : 'Admin'}
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )
+        )}
+
+        {/* Institution Settings */}
+        {mainTab === 'institution' && (
+          <form onSubmit={handleInstitutionUpdate} className="space-y-6 max-w-2xl">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-1.5">
+                <label className="eyebrow flex items-center gap-2">
+                  <Building2 className="w-3 h-3" /> Institution Name
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={institutionName}
+                  onChange={(e) => setInstitutionName(e.target.value)}
+                  className="w-full px-4 py-3 bg-paper border border-cream-border rounded-xl focus:outline-none focus:ring-4 focus:ring-ochre/10 focus:border-ochre/60 font-medium text-ink"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <label className="eyebrow flex items-center gap-2">
+                  <Mail className="w-3 h-3" /> Contact Email
+                </label>
+                <input
+                  type="email"
+                  value={institutionEmail}
+                  onChange={(e) => setInstitutionEmail(e.target.value)}
+                  className="w-full px-4 py-3 bg-paper border border-cream-border rounded-xl focus:outline-none focus:ring-4 focus:ring-ochre/10 focus:border-ochre/60 font-medium text-ink"
+                  placeholder="admin@college.edu"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="eyebrow flex items-center gap-2">
+                <MapPin className="w-3 h-3" /> Address
+              </label>
+              <textarea
+                value={institutionAddress}
+                onChange={(e) => setInstitutionAddress(e.target.value)}
+                rows={2}
+                className="w-full px-4 py-3 bg-paper border border-cream-border rounded-xl focus:outline-none focus:ring-4 focus:ring-ochre/10 focus:border-ochre/60 font-medium text-ink resize-none"
+                placeholder="Full address of the campus..."
+              />
+            </div>
+
+            <div className="pt-4 border-t border-cream-border flex items-center justify-end">
+              <button
+                type="submit"
+                disabled={isLoading}
+                className="bg-night hover:bg-black text-white px-6 py-3 rounded-xl font-bold flex items-center gap-2 transition-all shadow-lg hover:translate-y-[-1px] active:translate-y-0"
+              >
+                <Save className="w-4 h-4" />
+                <span>{isLoading ? 'Saving...' : 'Update Institution'}</span>
+              </button>
+            </div>
+          </form>
         )}
       </div>
     </div>

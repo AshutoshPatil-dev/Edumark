@@ -24,6 +24,7 @@ import { cn } from '../utils/attendance';
 import { motion, AnimatePresence } from 'motion/react';
 import { supabase } from '../lib/supabase';
 import { useSearchParams } from 'react-router-dom';
+import { useInstitution } from '../context/InstitutionContext';
 
 interface AttendancePageProps {
   students: Student[];
@@ -37,6 +38,7 @@ export default function AttendancePage({
   profile,
 }: AttendancePageProps) {
   const [searchParams, setSearchParams] = useSearchParams();
+  const { institutionId, scopeQuery } = useInstitution();
 
   const availableSubjects =
     profile.role === 'admin'
@@ -272,9 +274,9 @@ export default function AttendancePage({
       const d = new Date(date);
       const dayOfWeek = d.getDay();
 
-      let query = supabase
+      let query = scopeQuery(supabase
         .from('timetable')
-        .select('division')
+        .select('division'))
         .eq('day_of_week', dayOfWeek)
         .eq('subject_id', selectedSubject);
 
@@ -462,6 +464,7 @@ export default function AttendancePage({
         status: isAbsent ? 0 : 1,
         marked_by: profile.id,
         remark: remarks[student.id] || null,
+        institution_id: institutionId,
       };
     });
 

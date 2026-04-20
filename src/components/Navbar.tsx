@@ -7,6 +7,7 @@ import React, { useState } from 'react';
 import { useTheme } from '../context/ThemeContext';
 import ThemeToggle from './ThemeToggle';
 import { Link, useLocation } from 'react-router-dom';
+import { useInstitution } from '../context/InstitutionContext';
 import {
   LayoutDashboard,
   ClipboardCheck,
@@ -30,6 +31,7 @@ interface NavbarProps {
 
 export default function Navbar({ onLogout, profile }: NavbarProps) {
   const { theme } = useTheme();
+  const { institution } = useInstitution();
   const location = useLocation();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
@@ -117,8 +119,8 @@ export default function Navbar({ onLogout, profile }: NavbarProps) {
                     </span>
                     ark
                   </span>
-                  <span className="text-[0.625rem] uppercase tracking-[0.18em] text-ink-muted mt-1 font-sans">
-                    Class attendance
+                  <span className="text-[0.625rem] uppercase tracking-[0.18em] text-ink-muted mt-1 font-sans truncate max-w-[150px]">
+                    {institution?.name || 'Class attendance'}
                   </span>
                 </div>
               </Link>

@@ -27,6 +27,7 @@ export interface Profile {
   full_name: string | null;
   assigned_subjects: string[];
   roll_no: string | null;
+  institution_id: string | null;
 }
 
 export type BehaviourStatus = 'Excellent' | 'Good' | 'Risky' | 'Critical';

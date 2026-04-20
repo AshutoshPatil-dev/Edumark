@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { AlertCircle, CheckCircle2, XCircle, Clock, ChevronDown, ChevronUp, ClipboardCheck } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
+import { useInstitution } from '../context/InstitutionContext';
 import type { Student, Profile, TimetableEntry } from '../types';
 
 interface MissingAttendanceAlertProps {
@@ -20,6 +21,7 @@ interface MissingEntry {
 
 export default function MissingAttendanceAlert({ students, profile, refreshData }: MissingAttendanceAlertProps) {
   const navigate = useNavigate();
+  const { institutionId, scopeQuery } = useInstitution();
   const [missingList, setMissingList] = useState<MissingEntry[]>([]);
   const [expanded, setExpanded] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -28,16 +30,16 @@ export default function MissingAttendanceAlert({ students, profile, refreshData 
     if (profile.role !== 'faculty' && profile.role !== 'admin') return;
 
     const calculateMissing = async () => {
-      const { data: timetableData } = await supabase
+      const { data: timetableData } = await scopeQuery(supabase
         .from('timetable')
-        .select('*')
+        .select('*'))
         .eq('faculty_id', profile.id);
 
       if (!timetableData || timetableData.length === 0) return;
 
-      const { data: logsData } = await supabase
+      const { data: logsData } = await scopeQuery(supabase
         .from('admin_logs')
-        .select('*')
+        .select('*'))
         .eq('actor_id', profile.id)
         .eq('category', 'attendance');
 
@@ -174,6 +176,7 @@ export default function MissingAttendanceAlert({ students, profile, refreshData 
           `Lecture ${entry.lectureNo}`,
           entry.date,
         ].filter(Boolean).join(' · '),
+        institution_id: institutionId,
       });
 
       if (error) throw error;
@@ -197,7 +200,8 @@ export default function MissingAttendanceAlert({ students, profile, refreshData 
         date: entry.date,
         lecture_no: entry.lectureNo,
         status: 1,
-        marked_by: profile.id
+        marked_by: profile.id,
+        institution_id: institutionId
       }));
 
       const { error } = await supabase.from('attendance').upsert(records, {

@@ -3,8 +3,10 @@ import { supabase } from '../lib/supabase';
 import { DIVISIONS, SUBJECTS, type DivisionId } from '../constants';
 import { Calendar, Plus, Edit2, Trash2 } from 'lucide-react';
 import { cn } from '../utils/attendance';
+import { useInstitution } from '../context/InstitutionContext';
 
 export default function AdminTimetableEditor() {
+  const { institutionId, scopeQuery } = useInstitution();
   const [selectedDivision, setSelectedDivision] = useState<DivisionId>('A');
   const [timetable, setTimetable] = useState<any[]>([]);
   const [profiles, setProfiles] = useState<any[]>([]);
@@ -27,8 +29,8 @@ export default function AdminTimetableEditor() {
   const fetchData = async () => {
     setIsLoading(true);
     const [profilesRes, timetableRes] = await Promise.all([
-      supabase.from('profiles').select('id, full_name').in('role', ['faculty', 'admin']),
-      supabase.from('timetable').select('*').eq('division', selectedDivision)
+      scopeQuery(supabase.from('profiles').select('id, full_name').in('role', ['faculty', 'admin'])),
+      scopeQuery(supabase.from('timetable').select('*').eq('division', selectedDivision))
     ]);
     
     if (profilesRes.data) setProfiles(profilesRes.data);
@@ -60,7 +62,8 @@ export default function AdminTimetableEditor() {
       subject_id: formSubject,
       faculty_id: formFaculty,
       division: selectedDivision,
-      batch: formBatch || null
+      batch: formBatch || null,
+      institution_id: institutionId
     };
 
     if (editingSlot.id) {

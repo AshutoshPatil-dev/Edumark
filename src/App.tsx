@@ -21,6 +21,8 @@ import AdminPage from './pages/AdminPage';
 import Navbar from './components/Navbar';
 import MissingAttendanceAlert from './components/MissingAttendanceAlert';
 import LeaveRequestsPage from './pages/LeaveRequestsPage';
+import InstitutionOnboarding from './pages/InstitutionOnboarding';
+import { InstitutionProvider } from './context/InstitutionContext';
 import { supabase } from './lib/supabase';
 
 export default function App() {
@@ -30,6 +32,7 @@ export default function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [profileError, setProfileError] = useState<string | null>(null);
+  const [institutionId, setInstitutionId] = useState<string | null>(null);
 
   const fetchProfile = async (userId: string) => {
     setProfileError(null);
@@ -42,12 +45,14 @@ export default function App() {
       .single();
     
     if (profileData && !profileError) {
+      setInstitutionId(profileData.institution_id || null);
       setProfile({
         id: profileData.id,
         role: profileData.role,
         full_name: profileData.full_name,
         assigned_subjects: profileData.assigned_subjects || [],
-        roll_no: profileData.roll_no
+        roll_no: profileData.roll_no,
+        institution_id: profileData.institution_id || null,
       });
       return;
     }
@@ -111,8 +116,14 @@ export default function App() {
     
     try {
       // Fetch students and attendance from Supabase
+      // Feature 12: scope by institution when available
       let studentsQuery = supabase.from('students').select('*');
       let attendanceQuery = supabase.from('attendance').select('*');
+
+      if (institutionId) {
+        studentsQuery = studentsQuery.eq('institution_id', institutionId);
+        attendanceQuery = attendanceQuery.eq('institution_id', institutionId);
+      }
 
       // If student, only fetch their own data
       if (profile.role === 'student' && profile.roll_no) {
@@ -300,39 +311,55 @@ export default function App() {
     );
   }
 
-  return (
-    <Router>
-      <div className="min-h-screen bg-transparent flex flex-col">
-        <Navbar onLogout={handleLogout} profile={profile} />
-        <main className="flex-1 container mx-auto px-4 sm:px-6 py-10 max-w-7xl">
-          {!isLoading && <MissingAttendanceAlert students={students} profile={profile} refreshData={fetchStudents} />}
-          <Routes>
-            {(profile.role === 'faculty' || profile.role === 'admin') ? (
-              <>
-                <Route path="/" element={<DashboardPage students={students} />} />
-                <Route 
-                  path="/attendance" 
-                  element={<AttendancePage students={students} refreshData={fetchStudents} profile={profile} />} 
-                />
-                <Route path="/students" element={<StudentPage students={students} isLoading={isLoading} />} />
-                <Route path="/report" element={<ReportPage students={students} />} />
-                <Route path="/leaves" element={<LeaveRequestsPage profile={profile} />} />
-                {profile.role === 'admin' && (
-                  <Route path="/admin" element={<AdminPage refreshData={fetchStudents} />} />
-                )}
-                <Route path="*" element={<Navigate to="/" replace />} />
-              </>
-            ) : (
-              <>
-                <Route path="/" element={<StudentPage students={students.filter(s => s.rollNo === profile.roll_no)} isStudentView={true} isLoading={isLoading} />} />
-                <Route path="/leaves" element={<LeaveRequestsPage profile={profile} studentId={students.find(s => s.rollNo === profile.roll_no)?.id} />} />
-                <Route path="*" element={<Navigate to="/" replace />} />
-              </>
-            )}
-          </Routes>
-        </main>
+  if (profile.role === 'admin' && !profile.institution_id) {
+    return (
+      <div className="min-h-screen bg-paper font-sans text-ink selection:bg-ochre/20 selection:text-ochre-deep">
+        <InstitutionOnboarding 
+          profileId={profile.id} 
+          onComplete={async () => {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (user) await fetchProfile(user.id);
+          }} 
+        />
       </div>
-    </Router>
+    );
+  }
+
+  return (
+    <InstitutionProvider profileId={profile.id}>
+      <Router>
+        <div className="min-h-screen bg-transparent flex flex-col">
+          <Navbar onLogout={handleLogout} profile={profile} />
+          <main className="flex-1 container mx-auto px-4 sm:px-6 py-10 max-w-7xl">
+            {!isLoading && <MissingAttendanceAlert students={students} profile={profile} refreshData={fetchStudents} />}
+            <Routes>
+              {(profile.role === 'faculty' || profile.role === 'admin') ? (
+                <>
+                  <Route path="/" element={<DashboardPage students={students} />} />
+                  <Route 
+                    path="/attendance" 
+                    element={<AttendancePage students={students} refreshData={fetchStudents} profile={profile} />} 
+                  />
+                  <Route path="/students" element={<StudentPage students={students} isLoading={isLoading} />} />
+                  <Route path="/report" element={<ReportPage students={students} />} />
+                  <Route path="/leaves" element={<LeaveRequestsPage profile={profile} />} />
+                  {profile.role === 'admin' && (
+                    <Route path="/admin" element={<AdminPage refreshData={fetchStudents} />} />
+                  )}
+                  <Route path="*" element={<Navigate to="/" replace />} />
+                </>
+              ) : (
+                <>
+                  <Route path="/" element={<StudentPage students={students.filter(s => s.rollNo === profile.roll_no)} isStudentView={true} isLoading={isLoading} />} />
+                  <Route path="/leaves" element={<LeaveRequestsPage profile={profile} studentId={students.find(s => s.rollNo === profile.roll_no)?.id} />} />
+                  <Route path="*" element={<Navigate to="/" replace />} />
+                </>
+              )}
+            </Routes>
+          </main>
+        </div>
+      </Router>
+    </InstitutionProvider>
   );
 }
 

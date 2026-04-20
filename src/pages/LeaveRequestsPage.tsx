@@ -18,6 +18,7 @@ import {
 import { supabase } from '../lib/supabase';
 import { cn } from '../utils/attendance';
 import { motion, AnimatePresence } from 'motion/react';
+import { useInstitution } from '../context/InstitutionContext';
 import type { Profile, LeaveRequest, LeaveStatus, LeaveType } from '../types';
 
 interface LeaveRequestsPageProps {
@@ -53,6 +54,7 @@ const leaveTypeBadge: Record<string, string> = {
 };
 
 export default function LeaveRequestsPage({ profile, studentId }: LeaveRequestsPageProps) {
+  const { institutionId, scopeQuery } = useInstitution();
   const isStudentView = profile.role === 'student';
   const [requests, setRequests] = useState<LeaveRequest[]>([]);
   const [statusFilter, setStatusFilter] = useState<LeaveStatus | 'all'>('all');
@@ -81,6 +83,8 @@ export default function LeaveRequestsPage({ profile, studentId }: LeaveRequestsP
     if (isStudentView && studentId) {
       query = query.eq('student_id', studentId);
     }
+
+    query = scopeQuery(query);
 
     if (statusFilter !== 'all') {
       query = query.eq('status', statusFilter);
@@ -115,6 +119,7 @@ export default function LeaveRequestsPage({ profile, studentId }: LeaveRequestsP
         category: 'leave',
         action: `${action === 'approved' ? 'Approved' : 'Rejected'} leave request`,
         details: `${request?.students?.name || 'Unknown'} (${request?.students?.roll_no || '—'}) · ${request?.start_date} to ${request?.end_date} · ${request?.leave_type}${reviewNote ? ` · Note: ${reviewNote}` : ''}`,
+        institution_id: institutionId,
       });
       setActiveReviewId(null);
       setReviewNote('');
@@ -136,6 +141,7 @@ export default function LeaveRequestsPage({ profile, studentId }: LeaveRequestsP
       reason: formReason,
       leave_type: formType,
       status: 'pending',
+      institution_id: institutionId,
     });
 
     if (error) {
