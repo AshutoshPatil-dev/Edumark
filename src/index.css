@@ -57,7 +57,9 @@
 @layer base {
   html,
   body {
-    @apply text-ink antialiased;
+    color: var(--color-ink);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
     font-feature-settings: "cv02", "cv03", "cv04", "cv11", "ss01";
     background-color: var(--color-paper);
   }
