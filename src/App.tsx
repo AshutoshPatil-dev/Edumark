@@ -193,7 +193,7 @@ export default function App() {
     if (!isLoggedIn) return;
 
     let timeoutId: NodeJS.Timeout;
-    const INACTIVITY_LIMIT = 15 * 60 * 1000; // 15 minutes in milliseconds
+    const INACTIVITY_LIMIT = 15 * 60 * 1000;
     const STORAGE_KEY = 'edumark_last_activity';
 
     const checkTimeout = () => {
@@ -201,9 +201,14 @@ export default function App() {
       if (lastActivity) {
         const elapsed = Date.now() - parseInt(lastActivity, 10);
         if (elapsed >= INACTIVITY_LIMIT) {
-          handleLogout();
-          alert('You have been automatically logged out due to inactivity.');
-          return true;
+          // Defer logout if offline to prevent locking user out
+          if (navigator.onLine) {
+            handleLogout();
+            alert('You have been automatically logged out due to inactivity.');
+            return true;
+          } else {
+            console.log('Inactivity limit reached, but offline. Deferring logout.');
+          }
         }
       }
       return false;
@@ -215,18 +220,12 @@ export default function App() {
       localStorage.setItem(STORAGE_KEY, Date.now().toString());
       clearTimeout(timeoutId);
       timeoutId = setTimeout(() => {
-        if (!checkTimeout()) {
-          // If checkTimeout didn't log out (e.g. limit changed), force it
-          handleLogout();
-          alert('You have been automatically logged out due to inactivity.');
-        }
+        checkTimeout();
       }, INACTIVITY_LIMIT);
     };
 
-    // Initialize timer and check for existing timeout
     resetTimer();
 
-    // Events to track for activity
     const events = ['mousedown', 'mousemove', 'keydown', 'scroll', 'touchstart', 'touchmove', 'touchend'];
     
     let isThrottled = false;
@@ -234,7 +233,7 @@ export default function App() {
       if (!isThrottled) {
         resetTimer();
         isThrottled = true;
-        setTimeout(() => { isThrottled = false; }, 1000); // Throttle to once per second
+        setTimeout(() => { isThrottled = false; }, 1000);
       }
     };
 
@@ -244,13 +243,20 @@ export default function App() {
       }
     };
 
+    const handleOnline = () => {
+      // Check if we should have logged out while offline
+      checkTimeout();
+    };
+
     events.forEach(event => document.addEventListener(event, handleActivity));
     document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('online', handleOnline);
 
     return () => {
       clearTimeout(timeoutId);
       events.forEach(event => document.removeEventListener(event, handleActivity));
       document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('online', handleOnline);
     };
   }, [isLoggedIn]);
 
