@@ -21,6 +21,7 @@ import AdminPage from './pages/AdminPage';
 import Navbar from './components/Navbar';
 import MissingAttendanceAlert from './components/MissingAttendanceAlert';
 import LeaveRequestsPage from './pages/LeaveRequestsPage';
+import { SyncProvider } from './context/SyncContext';
 import { supabase } from './lib/supabase';
 
 export default function App() {
@@ -192,7 +193,7 @@ export default function App() {
     if (!isLoggedIn) return;
 
     let timeoutId: NodeJS.Timeout;
-    const INACTIVITY_LIMIT = 15 * 60 * 1000; // 15 minutes in milliseconds
+    const INACTIVITY_LIMIT = 15 * 60 * 1000;
     const STORAGE_KEY = 'edumark_last_activity';
 
     const checkTimeout = () => {
@@ -200,9 +201,14 @@ export default function App() {
       if (lastActivity) {
         const elapsed = Date.now() - parseInt(lastActivity, 10);
         if (elapsed >= INACTIVITY_LIMIT) {
-          handleLogout();
-          alert('You have been automatically logged out due to inactivity.');
-          return true;
+          // Defer logout if offline to prevent locking user out
+          if (navigator.onLine) {
+            handleLogout();
+            alert('You have been automatically logged out due to inactivity.');
+            return true;
+          } else {
+            console.log('Inactivity limit reached, but offline. Deferring logout.');
+          }
         }
       }
       return false;
@@ -214,18 +220,12 @@ export default function App() {
       localStorage.setItem(STORAGE_KEY, Date.now().toString());
       clearTimeout(timeoutId);
       timeoutId = setTimeout(() => {
-        if (!checkTimeout()) {
-          // If checkTimeout didn't log out (e.g. limit changed), force it
-          handleLogout();
-          alert('You have been automatically logged out due to inactivity.');
-        }
+        checkTimeout();
       }, INACTIVITY_LIMIT);
     };
 
-    // Initialize timer and check for existing timeout
     resetTimer();
 
-    // Events to track for activity
     const events = ['mousedown', 'mousemove', 'keydown', 'scroll', 'touchstart', 'touchmove', 'touchend'];
     
     let isThrottled = false;
@@ -233,7 +233,7 @@ export default function App() {
       if (!isThrottled) {
         resetTimer();
         isThrottled = true;
-        setTimeout(() => { isThrottled = false; }, 1000); // Throttle to once per second
+        setTimeout(() => { isThrottled = false; }, 1000);
       }
     };
 
@@ -243,13 +243,20 @@ export default function App() {
       }
     };
 
+    const handleOnline = () => {
+      // Check if we should have logged out while offline
+      checkTimeout();
+    };
+
     events.forEach(event => document.addEventListener(event, handleActivity));
     document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('online', handleOnline);
 
     return () => {
       clearTimeout(timeoutId);
       events.forEach(event => document.removeEventListener(event, handleActivity));
       document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('online', handleOnline);
     };
   }, [isLoggedIn]);
 
@@ -301,38 +308,40 @@ export default function App() {
   }
 
   return (
-    <Router>
-      <div className="min-h-screen bg-transparent flex flex-col">
-        <Navbar onLogout={handleLogout} profile={profile} />
-        <main className="flex-1 container mx-auto px-4 sm:px-6 py-10 max-w-7xl">
-          {!isLoading && <MissingAttendanceAlert students={students} profile={profile} refreshData={fetchStudents} />}
-          <Routes>
-            {(profile.role === 'faculty' || profile.role === 'admin') ? (
-              <>
-                <Route path="/" element={<DashboardPage students={students} />} />
-                <Route 
-                  path="/attendance" 
-                  element={<AttendancePage students={students} refreshData={fetchStudents} profile={profile} />} 
-                />
-                <Route path="/students" element={<StudentPage students={students} isLoading={isLoading} />} />
-                <Route path="/report" element={<ReportPage students={students} />} />
-                <Route path="/leaves" element={<LeaveRequestsPage profile={profile} />} />
-                {profile.role === 'admin' && (
-                  <Route path="/admin" element={<AdminPage refreshData={fetchStudents} />} />
-                )}
-                <Route path="*" element={<Navigate to="/" replace />} />
-              </>
-            ) : (
-              <>
-                <Route path="/" element={<StudentPage students={students.filter(s => s.rollNo === profile.roll_no)} isStudentView={true} isLoading={isLoading} />} />
-                <Route path="/leaves" element={<LeaveRequestsPage profile={profile} studentId={students.find(s => s.rollNo === profile.roll_no)?.id} />} />
-                <Route path="*" element={<Navigate to="/" replace />} />
-              </>
-            )}
-          </Routes>
-        </main>
-      </div>
-    </Router>
+    <SyncProvider>
+      <Router>
+        <div className="min-h-screen bg-transparent flex flex-col">
+          <Navbar onLogout={handleLogout} profile={profile} />
+          <main className="flex-1 container mx-auto px-4 sm:px-6 py-10 max-w-7xl">
+            {!isLoading && <MissingAttendanceAlert students={students} profile={profile} refreshData={fetchStudents} />}
+            <Routes>
+              {(profile.role === 'faculty' || profile.role === 'admin') ? (
+                <>
+                  <Route path="/" element={<DashboardPage students={students} />} />
+                  <Route 
+                    path="/attendance" 
+                    element={<AttendancePage students={students} refreshData={fetchStudents} profile={profile} />} 
+                  />
+                  <Route path="/students" element={<StudentPage students={students} isLoading={isLoading} />} />
+                  <Route path="/report" element={<ReportPage students={students} />} />
+                  <Route path="/leaves" element={<LeaveRequestsPage profile={profile} />} />
+                  {profile.role === 'admin' && (
+                    <Route path="/admin" element={<AdminPage refreshData={fetchStudents} />} />
+                  )}
+                  <Route path="*" element={<Navigate to="/" replace />} />
+                </>
+              ) : (
+                <>
+                  <Route path="/" element={<StudentPage students={students.filter(s => s.rollNo === profile.roll_no)} isStudentView={true} isLoading={isLoading} />} />
+                  <Route path="/leaves" element={<LeaveRequestsPage profile={profile} studentId={students.find(s => s.rollNo === profile.roll_no)?.id} />} />
+                  <Route path="*" element={<Navigate to="/" replace />} />
+                </>
+              )}
+            </Routes>
+          </main>
+        </div>
+      </Router>
+    </SyncProvider>
   );
 }
 
