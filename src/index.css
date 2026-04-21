@@ -5,6 +5,16 @@
   --radius-xl: 0.75rem;
   --radius-2xl: 1rem;
   --radius-3xl: 1.5rem;
+
+  /* Premium Design System Colors */
+  --color-ink: #0f172a;
+  --color-ink-muted: #64748b;
+  --color-paper: #f8fafc;
+  --color-card: #ffffff;
+  --color-cream-border: #e2e8f0;
+  --color-ochre: #2563eb;
+  --color-ochre-deep: #1d4ed8;
+  --color-ochre-light: #eff6ff;
 }
 
 @layer base {

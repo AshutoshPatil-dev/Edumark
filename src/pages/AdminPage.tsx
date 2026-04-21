@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase';
 import { DIVISIONS, type DivisionId } from '../constants';
 import { cn } from '../utils/attendance';
 import type { AttendanceLog } from '../types';
+import AdminTimetableEditor from '../components/AdminTimetableEditor';
 
 function getDivisionFromRollNo(rollNo: string): DivisionId {
   // Format: 25FC304 -> Index 4 is the division number (3 -> C)
@@ -23,6 +24,7 @@ function getDivisionFromRollNo(rollNo: string): DivisionId {
 export default function AdminPage() {
   const [mainTab, setMainTab] = useState<'students' | 'timetable' | 'logs'>('students');
   const [activeTab, setActiveTab] = useState<'single' | 'bulk'>('single');
+  const [timetableTab, setTimetableTab] = useState<'visual' | 'upload'>('visual');
   
   // Single student state
   const [name, setName] = useState('');
@@ -194,7 +196,7 @@ export default function AdminPage() {
           onClick={() => { setMainTab('students'); setMessage(null); }}
           className={cn(
             "flex-1 flex items-center justify-center space-x-2 px-4 py-3 rounded-xl font-bold text-sm transition-all",
-            mainTab === 'students' ? "bg-slate-900 text-white" : "text-slate-500 hover:bg-slate-50"
+            mainTab === 'students' ? "bg-blue-600 text-white shadow-md shadow-blue-200" : "text-slate-500 hover:bg-slate-50 hover:text-blue-600"
           )}
         >
           <UserPlus className="w-4 h-4" />
@@ -204,7 +206,7 @@ export default function AdminPage() {
           onClick={() => { setMainTab('timetable'); setMessage(null); }}
           className={cn(
             "flex-1 flex items-center justify-center space-x-2 px-4 py-3 rounded-xl font-bold text-sm transition-all",
-            mainTab === 'timetable' ? "bg-slate-900 text-white" : "text-slate-500 hover:bg-slate-50"
+            mainTab === 'timetable' ? "bg-blue-600 text-white shadow-md shadow-blue-200" : "text-slate-500 hover:bg-slate-50 hover:text-blue-600"
           )}
         >
           <Calendar className="w-4 h-4" />
@@ -214,7 +216,7 @@ export default function AdminPage() {
           onClick={() => { setMainTab('logs'); setMessage(null); }}
           className={cn(
             "flex-1 flex items-center justify-center space-x-2 px-4 py-3 rounded-xl font-bold text-sm transition-all",
-            mainTab === 'logs' ? "bg-slate-900 text-white" : "text-slate-500 hover:bg-slate-50"
+            mainTab === 'logs' ? "bg-blue-600 text-white shadow-md shadow-blue-200" : "text-slate-500 hover:bg-slate-50 hover:text-blue-600"
           )}
         >
           <FileText className="w-4 h-4" />
@@ -230,17 +232,17 @@ export default function AdminPage() {
                 <UserPlus className="w-6 h-6 text-blue-600" />
               </div>
               <div>
-                <h2 className="text-2xl font-bold text-slate-900">Add Students</h2>
+                <h2 className="text-2xl font-bold text-slate-900">Student Management</h2>
                 <p className="text-slate-500">Add new students to the database manually or via bulk upload.</p>
               </div>
             </div>
 
-            <div className="flex space-x-2 mb-8 border-b border-slate-100 pb-4">
+            <div className="flex space-x-2 mb-8 bg-slate-50 p-1.5 rounded-xl w-fit">
               <button
                 onClick={() => { setActiveTab('single'); setMessage(null); }}
                 className={cn(
                   "px-4 py-2 rounded-lg font-bold text-sm transition-all",
-                  activeTab === 'single' ? "bg-slate-900 text-white" : "text-slate-500 hover:bg-slate-50"
+                  activeTab === 'single' ? "bg-white text-blue-600 shadow-sm" : "text-slate-500 hover:text-slate-700"
                 )}
               >
                 Single Student
@@ -249,7 +251,7 @@ export default function AdminPage() {
                 onClick={() => { setActiveTab('bulk'); setMessage(null); }}
                 className={cn(
                   "px-4 py-2 rounded-lg font-bold text-sm transition-all",
-                  activeTab === 'bulk' ? "bg-slate-900 text-white" : "text-slate-500 hover:bg-slate-50"
+                  activeTab === 'bulk' ? "bg-white text-blue-600 shadow-sm" : "text-slate-500 hover:text-slate-700"
                 )}
               >
                 Bulk Upload
@@ -261,13 +263,34 @@ export default function AdminPage() {
         {mainTab === 'timetable' && (
           <>
             <div className="flex items-center space-x-4 mb-8">
-              <div className="w-12 h-12 bg-indigo-100 rounded-xl flex items-center justify-center">
-                <Calendar className="w-6 h-6 text-indigo-600" />
+              <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center">
+                <Calendar className="w-6 h-6 text-blue-600" />
               </div>
               <div>
-                <h2 className="text-2xl font-bold text-slate-900">Upload Timetable</h2>
-                <p className="text-slate-500">Upload the weekly schedule to enable smart attendance tracking.</p>
+                <h2 className="text-2xl font-bold text-slate-900">Timetable Management</h2>
+                <p className="text-slate-500">Easily manage and update the weekly schedule.</p>
               </div>
+            </div>
+
+            <div className="flex space-x-2 mb-8 bg-slate-50 p-1.5 rounded-xl w-fit">
+              <button
+                onClick={() => { setTimetableTab('visual'); setMessage(null); }}
+                className={cn(
+                  "px-4 py-2 rounded-lg font-bold text-sm transition-all",
+                  timetableTab === 'visual' ? "bg-white text-blue-600 shadow-sm" : "text-slate-500 hover:text-slate-700"
+                )}
+              >
+                Visual Editor
+              </button>
+              <button
+                onClick={() => { setTimetableTab('upload'); setMessage(null); }}
+                className={cn(
+                  "px-4 py-2 rounded-lg font-bold text-sm transition-all",
+                  timetableTab === 'upload' ? "bg-white text-blue-600 shadow-sm" : "text-slate-500 hover:text-slate-700"
+                )}
+              >
+                CSV Upload
+              </button>
             </div>
           </>
         )}
@@ -306,7 +329,7 @@ export default function AdminPage() {
                   required
                   value={name}
                   onChange={e => setName(e.target.value)}
-                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
+                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all placeholder:text-slate-300"
                   placeholder="e.g. John Doe"
                 />
               </div>
@@ -317,7 +340,7 @@ export default function AdminPage() {
                   required
                   value={rollNo}
                   onChange={e => setRollNo(e.target.value)}
-                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
+                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all placeholder:text-slate-300"
                   placeholder="e.g. 25FC304"
                 />
                 <p className="text-xs text-slate-500 mt-1">Division will be automatically determined from the roll number.</p>
@@ -328,14 +351,14 @@ export default function AdminPage() {
                   type="text"
                   value={batch}
                   onChange={e => setBatch(e.target.value)}
-                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
+                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all placeholder:text-slate-300"
                   placeholder="e.g. F1"
                 />
               </div>
               <button
                 type="submit"
                 disabled={isLoading}
-                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-xl transition-all disabled:opacity-50 flex items-center justify-center space-x-2"
+                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 px-4 rounded-xl shadow-lg shadow-blue-200 transition-all disabled:opacity-50 flex items-center justify-center space-x-2 transform active:scale-[0.98]"
               >
                 <UserPlus className="w-5 h-5" />
                 <span>{isLoading ? 'Adding...' : 'Add Student'}</span>
@@ -351,14 +374,14 @@ export default function AdminPage() {
                   value={bulkText}
                   onChange={e => setBulkText(e.target.value)}
                   rows={10}
-                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all font-mono text-sm"
+                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all font-mono text-sm placeholder:text-slate-300"
                   placeholder="John Doe, 25FC304, F1&#10;Jane Smith, 25FC205, F2"
                 />
               </div>
               <button
                 type="submit"
                 disabled={isLoading}
-                className="bg-slate-900 hover:bg-slate-800 text-white font-bold py-3 px-6 rounded-xl transition-all disabled:opacity-50 flex items-center justify-center space-x-2"
+                className="bg-slate-900 hover:bg-slate-800 text-white font-bold py-4 px-8 rounded-xl shadow-lg shadow-slate-200 transition-all disabled:opacity-50 flex items-center justify-center space-x-2 transform active:scale-[0.98]"
               >
                 <Upload className="w-5 h-5" />
                 <span>{isLoading ? 'Processing...' : 'Upload Students'}</span>
@@ -368,59 +391,93 @@ export default function AdminPage() {
         )}
 
         {mainTab === 'timetable' && (
-          <form onSubmit={handleTimetableSubmit} className="space-y-6">
-            <div className="space-y-2">
-              <label className="text-sm font-bold text-slate-700">CSV Data (Day, Subject, Division, FacultyName, LectureNo, Batch)</label>
-              <p className="text-xs text-slate-500 mb-2">Paste comma-separated values. Day is 1 (Monday) to 5 (Friday). If the name is "unknown" or not found, it will default to you for testing. Batch is optional.</p>
-              <textarea
-                required
-                value={timetableCSV}
-                onChange={e => setTimetableCSV(e.target.value)}
-                rows={10}
-                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all font-mono text-sm"
-                placeholder="1, DEIC, C, unknown, 2, &#10;3, AC, A, unknown, 1, F1"
-              />
-            </div>
-            <button
-              type="submit"
-              disabled={isLoading}
-              className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-6 rounded-xl transition-all disabled:opacity-50 flex items-center justify-center space-x-2"
-            >
-              <Upload className="w-5 h-5" />
-              <span>{isLoading ? 'Processing...' : 'Upload Timetable'}</span>
-            </button>
-          </form>
+          timetableTab === 'visual' ? (
+            <AdminTimetableEditor />
+          ) : (
+            <form onSubmit={handleTimetableSubmit} className="space-y-6">
+              <div className="space-y-2">
+                <label className="text-sm font-bold text-slate-700">CSV Data (Day, Subject, Division, FacultyName, LectureNo, Batch)</label>
+                <p className="text-xs text-slate-500 mb-2">Paste comma-separated values. Day is 1 (Monday) to 5 (Friday). If the name is "unknown" or not found, it will default to you for testing. Batch is optional.</p>
+                <textarea
+                  required
+                  value={timetableCSV}
+                  onChange={e => setTimetableCSV(e.target.value)}
+                  rows={10}
+                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all font-mono text-sm placeholder:text-slate-300"
+                  placeholder="1, DEIC, C, unknown, 2, &#10;3, AC, A, unknown, 1, F1"
+                />
+              </div>
+              <button
+                type="submit"
+                disabled={isLoading}
+                className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 px-8 rounded-xl shadow-lg shadow-blue-200 transition-all disabled:opacity-50 flex items-center justify-center space-x-2 transform active:scale-[0.98]"
+              >
+                <Upload className="w-5 h-5" />
+                <span>{isLoading ? 'Processing...' : 'Upload Timetable'}</span>
+              </button>
+            </form>
+          )
         )}
 
         {mainTab === 'logs' && (
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto -mx-8 px-8">
             <table className="w-full text-left border-collapse">
               <thead>
-                <tr className="border-b border-slate-200 text-slate-500 text-sm">
-                  <th className="pb-3 font-medium">Date</th>
-                  <th className="pb-3 font-medium">Faculty</th>
-                  <th className="pb-3 font-medium">Subject</th>
-                  <th className="pb-3 font-medium">Division</th>
-                  <th className="pb-3 font-medium">Batch</th>
-                  <th className="pb-3 font-medium">Action</th>
+                <tr className="border-b border-slate-100 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">
+                  <th className="pb-4 font-black">Date</th>
+                  <th className="pb-4 font-black">Faculty</th>
+                  <th className="pb-4 font-black">Details</th>
+                  <th className="pb-4 font-black">Scope</th>
+                  <th className="pb-4 font-black">Type</th>
                 </tr>
               </thead>
               <tbody className="text-sm">
                 {logs.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="py-8 text-center text-slate-500">No logs found.</td>
+                    <td colSpan={5} className="py-16 text-center">
+                      <div className="flex flex-col items-center">
+                        <FileText className="w-10 h-10 text-slate-100 mb-3" />
+                        <p className="text-slate-400 font-bold uppercase tracking-widest text-xs">No activity logs recorded</p>
+                      </div>
+                    </td>
                   </tr>
                 ) : (
                   logs.map((log) => (
-                    <tr key={log.id} className="border-b border-slate-100 hover:bg-slate-50 transition-colors">
-                      <td className="py-3 font-medium text-slate-800">{new Date(log.date).toLocaleDateString()}</td>
-                      <td className="py-3 text-slate-600">{log.profiles?.full_name || 'Unknown'}</td>
-                      <td className="py-3 text-slate-600">{log.subject_id}</td>
-                      <td className="py-3 text-slate-600">Div {log.division}</td>
-                      <td className="py-3 text-slate-600">{log.batch || '-'}</td>
-                      <td className="py-3">
-                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800">
-                          {log.action} {log.notes ? `(Lec ${log.notes})` : ''}
+                    <tr key={log.id} className="border-b border-slate-50 hover:bg-slate-50/50 transition-colors group">
+                      <td className="py-4">
+                        <div className="flex flex-col">
+                          <span className="font-black text-slate-700 leading-none">{new Date(log.date).toLocaleDateString('en-US', { day: 'numeric', month: 'short' })}</span>
+                          <span className="text-[10px] text-slate-400 font-bold mt-1 uppercase">{new Date(log.date).getFullYear()}</span>
+                        </div>
+                      </td>
+                      <td className="py-4">
+                        <div className="flex items-center gap-2">
+                          <div className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center text-[10px] font-black text-slate-500 uppercase">
+                            {(log.profiles?.full_name || 'U').charAt(0)}
+                          </div>
+                          <span className="font-bold text-slate-600">{log.profiles?.full_name || 'Unknown'}</span>
+                        </div>
+                      </td>
+                      <td className="py-4">
+                        <div className="flex flex-col">
+                          <span className="bg-slate-100 text-slate-700 px-2 py-0.5 rounded-md text-[10px] font-black uppercase tracking-tight w-fit mb-1">{log.subject_id}</span>
+                          <span className="text-xs text-slate-400 font-medium italic">{log.notes || 'Routine update'}</span>
+                        </div>
+                      </td>
+                      <td className="py-4">
+                        <div className="flex flex-col">
+                          <span className="text-xs font-bold text-slate-600">Division {log.division}</span>
+                          <span className="text-[10px] text-slate-400 font-bold uppercase">{log.batch || 'Entire Div'}</span>
+                        </div>
+                      </td>
+                      <td className="py-4">
+                        <span className={cn(
+                          "inline-flex items-center px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border shadow-sm",
+                          log.action === 'Holiday' 
+                            ? "bg-rose-50 text-rose-600 border-rose-100" 
+                            : "bg-blue-50 text-blue-600 border-blue-100"
+                        )}>
+                          {log.action}
                         </span>
                       </td>
                     </tr>
@@ -434,3 +491,6 @@ export default function AdminPage() {
     </div>
   );
 }
+
+// ... existing helper functions (getDivisionFromRollNo) should be preserved or moved outside ...
+

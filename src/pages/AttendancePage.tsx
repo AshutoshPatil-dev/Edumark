@@ -450,7 +450,7 @@ export default function AttendancePage({ students, refreshData, profile }: Atten
                           className={cn(
                             "flex-1 min-w-[60px] py-3 rounded-xl font-bold text-sm transition-all",
                             selectedBatch === batch 
-                              ? "bg-indigo-600 text-white shadow-md shadow-indigo-600/20" 
+                              ? "bg-blue-600 text-white shadow-md shadow-blue-600/20" 
                               : "bg-slate-50 text-slate-600 hover:bg-slate-100"
                           )}
                         >

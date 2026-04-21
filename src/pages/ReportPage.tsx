@@ -4,6 +4,8 @@
  */
 
 import { useState, useMemo } from 'react';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 import { Download, FileText, Search, Filter, ChevronRight, Users, ChevronDown } from 'lucide-react';
 import type { Student } from '../types';
 import { SUBJECTS, DIVISIONS, type DivisionId } from '../constants';
@@ -79,6 +81,69 @@ export default function ReportPage({ students }: ReportPageProps) {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+  };
+
+  const downloadPDF = (student: any) => {
+    const doc = new jsPDF();
+    
+    // Header
+    doc.setFontSize(22);
+    doc.setTextColor(30, 41, 59); // slate-800
+    doc.text('EduMark Academic Report', 14, 22);
+    
+    // Details
+    doc.setFontSize(11);
+    doc.setTextColor(100);
+    doc.text(`Generated on: ${new Date().toLocaleDateString()}`, 14, 30);
+    
+    doc.setDrawColor(226, 232, 240); // slate-200
+    doc.line(14, 35, 196, 35);
+    
+    doc.setFontSize(12);
+    doc.setTextColor(51, 65, 85); // slate-700
+    doc.text(`Student Name:`, 14, 45);
+    doc.setFont(undefined, 'bold');
+    doc.text(student.name, 45, 45);
+    
+    doc.setFont(undefined, 'normal');
+    doc.text(`Roll Number:`, 14, 52);
+    doc.setFont(undefined, 'bold');
+    doc.text(student.rollNo, 45, 52);
+    
+    doc.setFont(undefined, 'normal');
+    doc.text(`Division:`, 14, 59);
+    doc.setFont(undefined, 'bold');
+    doc.text(student.division, 45, 59);
+    
+    doc.setFont(undefined, 'normal');
+    doc.text(`Overall TWAS:`, 14, 66);
+    doc.setFont(undefined, 'bold');
+    doc.text(`${student.avgScore.toFixed(2)}%`, 45, 66);
+    
+    doc.setFont(undefined, 'normal');
+    doc.text(`Current Status:`, 14, 73);
+    doc.setFont(undefined, 'bold');
+    doc.text(student.overallStatus, 45, 73);
+
+    // Table
+    const tableColumn = ["Subject", "Attendance Score (%)", "Status", "Lectures"];
+    const tableRows = student.subjectStats.map((s: any) => [
+      s.subject,
+      s.score.toFixed(2),
+      s.status,
+      s.totalLectures
+    ]);
+
+    autoTable(doc, {
+      head: [tableColumn],
+      body: tableRows,
+      startY: 85,
+      styles: { fontSize: 10, cellPadding: 5 },
+      headStyles: { fillColor: [15, 23, 42], textColor: [255, 255, 255] }, // slate-900
+      alternateRowStyles: { fillColor: [248, 250, 252] } // slate-50
+    });
+
+    doc.save(`EduMark_Report_${student.rollNo}.pdf`);
   };
 
   const downloadAllCSV = () => {
@@ -229,13 +294,24 @@ export default function ReportPage({ students }: ReportPageProps) {
                     </span>
                   </td>
                   <td className="px-6 py-4 text-right">
-                    <button 
-                      onClick={() => downloadCSV(report)}
-                      className="inline-flex items-center space-x-2 text-blue-600 hover:text-blue-700 font-bold text-sm bg-blue-50 hover:bg-blue-100 px-3 py-1.5 rounded-lg transition-all"
-                    >
-                      <FileText className="w-4 h-4" />
-                      <span>CSV</span>
-                    </button>
+                    <div className="flex items-center justify-end space-x-2">
+                      <button 
+                        onClick={() => downloadCSV(report)}
+                        className="inline-flex items-center space-x-2 text-blue-600 hover:text-blue-700 font-bold text-xs bg-blue-50 hover:bg-blue-100 px-3 py-1.5 rounded-lg transition-all"
+                        title="Download CSV"
+                      >
+                        <FileText className="w-3.5 h-3.5" />
+                        <span>CSV</span>
+                      </button>
+                      <button 
+                        onClick={() => downloadPDF(report)}
+                        className="inline-flex items-center space-x-2 text-white hover:bg-slate-800 font-bold text-xs bg-slate-900 px-3 py-1.5 rounded-lg transition-all"
+                        title="Download PDF"
+                      >
+                        <Download className="w-3.5 h-3.5" />
+                        <span>PDF</span>
+                      </button>
+                    </div>
                   </td>
                 </motion.tr>
               ))}

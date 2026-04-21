@@ -5,7 +5,7 @@
 
 import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { LayoutDashboard, ClipboardCheck, Users, FileBarChart, LogOut, GraduationCap, User, Menu, X, AlertTriangle, UserPlus } from 'lucide-react';
+import { LayoutDashboard, ClipboardCheck, Users, FileBarChart, LogOut, GraduationCap, User, Menu, X, AlertTriangle, UserPlus, FileClock } from 'lucide-react';
 import { cn } from '../utils/attendance';
 import type { Profile } from '../types';
 
@@ -24,6 +24,7 @@ export default function Navbar({ onLogout, profile }: NavbarProps) {
     { path: '/attendance', label: 'Attendance', icon: ClipboardCheck },
     { path: '/students', label: 'Students', icon: Users },
     { path: '/report', label: 'Reports', icon: FileBarChart },
+    { path: '/leaves', label: 'Leaves', icon: FileClock },
   ];
 
   if (profile.role === 'admin') {
@@ -32,6 +33,7 @@ export default function Navbar({ onLogout, profile }: NavbarProps) {
 
   const studentItems = [
     { path: '/', label: 'My Attendance', icon: Users },
+    { path: '/leaves', label: 'My Leaves', icon: FileClock },
   ];
 
   const navItems = (profile.role === 'faculty' || profile.role === 'admin') ? facultyItems : studentItems;
