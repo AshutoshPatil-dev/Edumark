@@ -46,7 +46,7 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
   };
 
   return (
-    <div className="min-h-screen flex flex-col lg:grid lg:grid-cols-2 bg-transparent relative">
+    <div className="min-h-screen lg:h-screen lg:overflow-hidden flex flex-col lg:grid lg:grid-cols-2 bg-transparent relative">
       <div className="fixed top-4 right-4 z-50 sm:top-6 sm:right-6">
         <ThemeToggle className="bg-card/80 shadow-sm border border-cream-border/80" />
       </div>
@@ -112,7 +112,7 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
           transition={{ duration: 0.5, delay: 0.1 }}
           className="w-full max-w-md"
         >
-          <div className="mb-8 rounded-2xl border border-cream-border bg-card/90 p-6 sm:p-8 shadow-lg shadow-ochre/5 ring-1 ring-aqua/10 backdrop-blur-md">
+          <div className="rounded-2xl border border-cream-border bg-card/90 p-6 sm:p-8 shadow-lg shadow-ochre/5 ring-1 ring-aqua/10 backdrop-blur-md">
           <div className="mb-8">
             <p className="eyebrow">Sign in</p>
             <h2 className="font-sans text-2xl sm:text-3xl font-semibold text-ink mt-2 tracking-tight">

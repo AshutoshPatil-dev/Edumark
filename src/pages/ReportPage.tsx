@@ -368,11 +368,13 @@ export default function ReportPage({ students }: ReportPageProps) {
                           <div
                             className={cn(
                               'h-full rounded-full',
-                              report.avgScore >= 70
+                              report.avgScore >= 85
                                 ? 'bg-emerald-500'
-                                : report.avgScore >= 50
+                                : report.avgScore >= 70
                                   ? 'bg-blue-500'
-                                  : 'bg-rose-500',
+                                  : report.avgScore >= 50
+                                    ? 'bg-amber-500'
+                                    : 'bg-rose-500',
                             )}
                             style={{ width: `${report.avgScore}%` }}
                           />
