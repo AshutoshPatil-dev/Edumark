@@ -1,70 +1,20 @@
-# EduMark
+<div align="center">
+<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
+</div>
 
-A considered attendance record system for educational institutions.
-Track attendance across divisions and lectures, review approvals, generate
-academic reports, and monitor student performance — all through a calm,
-editorial interface.
+# Run and deploy your AI Studio app
 
-## Features
+This contains everything you need to run your app locally.
 
-- Role-based access for administrators, faculty, and class coordinators
-- Daily attendance capture with edit and approval workflows
-- Division, lecture, and subject-level record keeping
-- Automated alerts for missed attendance windows
-- Academic reports with Excel export
-- Secure authentication and session management via Supabase
+View your app in AI Studio: https://ai.studio/apps/b06c9e1b-a1c2-441a-877c-86fa99772122
 
-## Tech Stack
+## Run Locally
 
-- React 19 + TypeScript
-- Vite
-- Tailwind CSS v4
-- Supabase (Auth + Postgres)
-- React Router v7
-- Recharts, date-fns, lucide-react
+**Prerequisites:**  Node.js
 
-## Running locally
 
-**Prerequisites:** Node.js 18 or newer.
-
-1. Install dependencies
-   ```bash
-   npm install
-   ```
-
-2. Create a `.env.local` file in the project root and set your Supabase
-   credentials:
-   ```
-   VITE_SUPABASE_URL=your-supabase-url
-   VITE_SUPABASE_ANON_KEY=your-supabase-anon-key
-   ```
-
-3. Start the development server
-   ```bash
-   npm run dev
-   ```
-
-The app will be available at `http://localhost:3000`.
-
-## Scripts
-
-- `npm run dev` — start the Vite dev server
-- `npm run build` — create a production build
-- `npm run preview` — preview the production build
-- `npm run lint` — type-check the project with `tsc`
-
-## Project Structure
-
-```
-src/
-  components/   Reusable UI (navbar, logo, alerts, logs)
-  pages/        Route-level screens (dashboard, attendance, admin, etc.)
-  lib/          Supabase client
-  utils/        Shared helpers
-  types.ts      Shared TypeScript types
-  constants.ts  Shared constants
-```
-
-## License
-
-Proprietary. All rights reserved.
+1. Install dependencies:
+   `npm install`
+2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
+3. Run the app:
+   `npm run dev`

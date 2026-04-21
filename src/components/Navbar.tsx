@@ -3,29 +3,11 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState } from 'react';
-import { useTheme } from '../context/ThemeContext';
-import ThemeToggle from './ThemeToggle';
+import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import {
-  LayoutDashboard,
-  ClipboardCheck,
-  Users,
-  FileBarChart,
-  LogOut,
-  Menu,
-  X,
-  AlertTriangle,
-  UserPlus,
-  FileText,
-  Cloud,
-  CloudOff,
-  RefreshCw,
-} from 'lucide-react';
-import { useSync } from '../context/SyncContext';
+import { LayoutDashboard, ClipboardCheck, Users, FileBarChart, LogOut, GraduationCap, User, Menu, X, AlertTriangle, UserPlus } from 'lucide-react';
 import { cn } from '../utils/attendance';
 import type { Profile } from '../types';
-import EdumarkLogo from './EdumarkLogo';
 
 interface NavbarProps {
   onLogout: () => void;
@@ -33,18 +15,15 @@ interface NavbarProps {
 }
 
 export default function Navbar({ onLogout, profile }: NavbarProps) {
-  const { theme } = useTheme();
-  const { isOnline, pendingCount, syncNow } = useSync();
   const location = useLocation();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
   const facultyItems = [
-    { path: '/', label: 'Overview', icon: LayoutDashboard },
-    { path: '/attendance', label: 'Mark', icon: ClipboardCheck },
+    { path: '/', label: 'Dashboard', icon: LayoutDashboard },
+    { path: '/attendance', label: 'Attendance', icon: ClipboardCheck },
     { path: '/students', label: 'Students', icon: Users },
     { path: '/report', label: 'Reports', icon: FileBarChart },
-    { path: '/leaves', label: 'Leaves', icon: FileText },
   ];
 
   if (profile.role === 'admin') {
@@ -52,14 +31,10 @@ export default function Navbar({ onLogout, profile }: NavbarProps) {
   }
 
   const studentItems = [
-    { path: '/', label: 'My Record', icon: Users },
-    { path: '/leaves', label: 'My Leaves', icon: FileText },
+    { path: '/', label: 'My Attendance', icon: Users },
   ];
 
-  const navItems =
-    profile.role === 'faculty' || profile.role === 'admin'
-      ? facultyItems
-      : studentItems;
+  const navItems = (profile.role === 'faculty' || profile.role === 'admin') ? facultyItems : studentItems;
 
   const handleLogoutClick = () => {
     setShowLogoutConfirm(true);
@@ -71,144 +46,27 @@ export default function Navbar({ onLogout, profile }: NavbarProps) {
     onLogout();
   };
 
-  const handleNavClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
-    if ((window as any).hasUnsavedAttendanceChanges) {
-      if (!window.confirm('You have unsaved attendance changes. If you leave, your changes will be lost. Do you want to proceed?')) {
-        e.preventDefault();
-        return;
-      } else {
-        (window as any).hasUnsavedAttendanceChanges = false;
-      }
-    }
-    setIsMobileMenuOpen(false);
-  };
-
-  const initials = (profile.full_name || 'U')
-    .split(' ')
-    .map((n) => n.charAt(0))
-    .slice(0, 2)
-    .join('')
-    .toUpperCase();
-
   return (
     <>
-      <div className="sticky top-0 z-50 w-full pt-4 pb-2 px-4 sm:px-6 pointer-events-none">
-        <nav className="max-w-7xl mx-auto bg-card/85 text-ink border border-cream-border/80 shadow-md shadow-ink/5 backdrop-blur-xl rounded-2xl pointer-events-auto transition-all">
-          <div className="px-4 sm:px-6">
-            <div className="flex items-center justify-between h-14 sm:h-[60px]">
-              <div className="flex items-center gap-3">
+      <nav className="bg-slate-900 text-white shadow-lg sticky top-0 z-50">
+        <div className="container mx-auto px-4 max-w-7xl">
+          <div className="flex items-center justify-between h-16">
+            <div className="flex items-center">
               <button
                 onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-                aria-label="Toggle navigation"
-                className="md:hidden p-2 -ml-2 text-ink-muted hover:text-ink hover:bg-cream-soft rounded-lg"
+                className="md:hidden p-2 mr-2 text-slate-300 hover:text-white hover:bg-slate-800 rounded-lg transition-colors"
               >
-                {isMobileMenuOpen ? (
-                  <X className="w-5 h-5" />
-                ) : (
-                  <Menu className="w-5 h-5" />
-                )}
+                {isMobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
               </button>
-
-              <Link to="/" onClick={handleNavClick} className="flex items-center gap-3 group">
-                <EdumarkLogo size={38} variant={theme === 'dark' ? 'light' : 'dark'} />
-                <div className="hidden sm:flex flex-col leading-none">
-                  <span
-                    className="font-sans text-[1.35rem] text-ink tracking-tight"
-                    style={{ fontWeight: 600 }}
-                  >
-                    Edu
-                    <span className="text-gradient-cool" style={{ fontWeight: 700 }}>
-                      m
-                    </span>
-                    ark
-                  </span>
-                  <span className="text-[0.625rem] uppercase tracking-[0.18em] text-ink-muted mt-1 font-sans">
-                    Class attendance
-                  </span>
+              <Link to="/" className="flex items-center space-x-2 group">
+                <div className="bg-blue-600 p-1.5 rounded-lg group-hover:bg-blue-500 transition-colors">
+                  <GraduationCap className="w-6 h-6" />
                 </div>
+                <span className="text-xl font-bold tracking-tight">EduMark</span>
               </Link>
             </div>
 
-            <div className="hidden md:flex items-center">
-              <div className="flex items-center gap-1">
-                {navItems.map((item) => {
-                  const Icon = item.icon;
-                  const isActive = location.pathname === item.path;
-                  return (
-                    <Link
-                      key={item.path}
-                      to={item.path}
-                      onClick={handleNavClick}
-                      className={cn(
-                        'flex items-center gap-2 px-3.5 py-2 rounded-xl text-[0.875rem] transition-colors',
-                        isActive
-                          ? 'bg-ink text-paper shadow-md font-semibold'
-                          : 'text-ink-muted hover:text-ink hover:bg-cream-soft font-medium'
-                      )}
-                    >
-                      <Icon className="w-[16px] h-[16px]" strokeWidth={isActive ? 2.5 : 2} />
-                      <span>{item.label}</span>
-                    </Link>
-                  );
-                })}
-              </div>
-            </div>
-
-            <div className="flex items-center gap-1 sm:gap-2 md:gap-3">
-              {/* Sync Status Indicator */}
-              <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-paper/50 border border-cream-border/50 mr-1">
-                {isOnline ? (
-                  <div className="flex items-center gap-2">
-                    {pendingCount > 0 ? (
-                      <button 
-                        onClick={() => syncNow()}
-                        className="flex items-center gap-1.5 text-ochre hover:text-ochre-deep transition-colors"
-                        title={`${pendingCount} records pending sync`}
-                      >
-                        <RefreshCw className="w-3.5 h-3.5 animate-spin-slow" />
-                        <span className="text-[0.65rem] font-bold tabular-nums">{pendingCount}</span>
-                      </button>
-                    ) : (
-                      <Cloud className="w-3.5 h-3.5 text-emerald-500" title="All data synced" />
-                    )}
-                  </div>
-                ) : (
-                  <div className="flex items-center gap-1.5 text-rose-500" title="You are offline. Changes saved locally.">
-                    <CloudOff className="w-3.5 h-3.5" />
-                    {pendingCount > 0 && <span className="text-[0.65rem] font-bold tabular-nums">{pendingCount}</span>}
-                  </div>
-                )}
-              </div>
-
-              <ThemeToggle className="shrink-0" />
-              <div className="hidden sm:flex items-center gap-3 px-3 py-1.5 rounded-xl hover:bg-cream-soft transition-colors cursor-pointer">
-                <div className="text-right">
-                  <span className="block text-[0.8125rem] font-bold text-ink leading-none">
-                    {profile.full_name || 'User'}
-                  </span>
-                  <span className="block text-[0.6875rem] font-medium text-ink-muted uppercase tracking-[0.08em] mt-1">
-                    {profile.role}
-                    {profile.roll_no ? ` · ${profile.roll_no}` : ''}
-                  </span>
-                </div>
-                <div className="w-9 h-9 rounded-full bg-ochre/10 text-ochre-deep flex items-center justify-center font-bold text-[0.8125rem]">
-                  {initials}
-                </div>
-              </div>
-              <button
-                onClick={handleLogoutClick}
-                title="Sign out"
-                aria-label="Sign out"
-                className="hidden md:inline-flex items-center gap-2 px-3 py-2 rounded-lg text-[0.8125rem] font-medium text-ink-muted hover:text-ink hover:bg-cream-soft"
-              >
-                <LogOut className="w-4 h-4" />
-              </button>
-            </div>
-          </div>
-
-          {/* Mobile menu */}
-          {isMobileMenuOpen && (
-            <div className="md:hidden py-4 border-t border-cream-border space-y-1 bg-card/95 backdrop-blur-xl rounded-b-2xl px-2 animate-in slide-in-from-top-2">
+            <div className="hidden md:flex items-center space-x-1">
               {navItems.map((item) => {
                 const Icon = item.icon;
                 const isActive = location.pathname === item.path;
@@ -216,80 +74,101 @@ export default function Navbar({ onLogout, profile }: NavbarProps) {
                   <Link
                     key={item.path}
                     to={item.path}
-                    onClick={handleNavClick}
                     className={cn(
-                      'flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium',
-                      isActive
-                        ? 'bg-gradient-to-r from-ochre/[0.08] to-aqua/[0.07] text-ink border border-ochre/25'
-                        : 'text-ink-muted hover:text-ink hover:bg-paper'
+                      "flex items-center space-x-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200",
+                      isActive 
+                        ? "bg-blue-600 text-white shadow-md shadow-blue-900/20" 
+                        : "text-slate-300 hover:text-white hover:bg-slate-800"
                     )}
                   >
-                    <Icon className="w-[18px] h-[18px]" />
+                    <Icon className="w-4 h-4" />
                     <span>{item.label}</span>
                   </Link>
                 );
               })}
+            </div>
 
+            <div className="flex items-center space-x-2 md:space-x-4">
+              <div className="hidden sm:flex flex-col items-end mr-2">
+                <span className="text-xs font-bold text-white leading-none">{profile.full_name || 'User'}</span>
+                <span className="text-[10px] text-slate-400 uppercase tracking-widest font-bold mt-1">
+                  {profile.role} {profile.roll_no ? `(${profile.roll_no})` : ''}
+                </span>
+              </div>
               <button
                 onClick={handleLogoutClick}
-                className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-ink-muted hover:text-ink hover:bg-paper mt-1"
+                className="hidden md:flex items-center space-x-2 px-3 py-2 md:px-4 rounded-lg text-sm font-medium text-slate-300 hover:text-rose-400 hover:bg-slate-800 transition-all duration-200"
               >
-                <LogOut className="w-[18px] h-[18px]" />
-                <span>Sign out</span>
+                <LogOut className="w-4 h-4" />
+                <span>Logout</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Mobile Navigation Menu */}
+          {isMobileMenuOpen && (
+            <div className="md:hidden py-4 border-t border-slate-800 space-y-2 animate-in slide-in-from-top-2">
+              {navItems.map((item) => {
+                const Icon = item.icon;
+                const isActive = location.pathname === item.path;
+                return (
+                  <Link
+                    key={item.path}
+                    to={item.path}
+                    onClick={() => setIsMobileMenuOpen(false)}
+                    className={cn(
+                      "flex items-center space-x-3 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200",
+                      isActive 
+                        ? "bg-blue-600 text-white shadow-md shadow-blue-900/20" 
+                        : "text-slate-300 hover:text-white hover:bg-slate-800"
+                    )}
+                  >
+                    <Icon className="w-5 h-5" />
+                    <span>{item.label}</span>
+                  </Link>
+                );
+              })}
+              
+              <button
+                onClick={handleLogoutClick}
+                className="w-full flex items-center space-x-3 px-4 py-3 rounded-xl text-sm font-medium text-rose-400 hover:text-rose-300 hover:bg-slate-800 transition-all duration-200 mt-2"
+              >
+                <LogOut className="w-5 h-5" />
+                <span>Logout</span>
               </button>
 
-              <div className="pt-4 mt-2 border-t border-cream-border sm:hidden px-4 flex items-center gap-3">
-                <div className="w-9 h-9 rounded-full bg-gradient-to-br from-ochre/15 to-aqua/20 text-ochre flex items-center justify-center font-semibold text-sm border border-ochre/25 ring-1 ring-aqua/15">
-                  {initials}
-                </div>
-                <div>
-                  <p className="text-sm font-semibold text-ink leading-none">
-                    {profile.full_name || 'User'}
-                  </p>
-                  <p className="text-[0.625rem] uppercase tracking-[0.12em] text-ink-muted mt-1.5">
-                    {profile.role}
-                    {profile.roll_no ? ` · ${profile.roll_no}` : ''}
-                  </p>
-                </div>
+              <div className="pt-4 mt-2 border-t border-slate-800 sm:hidden px-4">
+                <p className="text-xs font-bold text-white">{profile.full_name || 'User'}</p>
+                <p className="text-[10px] text-slate-400 uppercase tracking-widest font-bold mt-1">
+                  {profile.role} {profile.roll_no ? `(${profile.roll_no})` : ''}
+                </p>
               </div>
             </div>
           )}
-          </div>
-        </nav>
-      </div>
+        </div>
+      </nav>
 
-      {/* Logout confirmation */}
+      {/* Logout Confirmation Modal */}
       {showLogoutConfirm && (
-        <div
-          className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-night/50 backdrop-blur-sm"
-          onClick={() => setShowLogoutConfirm(false)}
-        >
-          <div
-            className="bg-paper rounded-3xl shadow-[0_30px_60px_-20px_rgba(11,15,25,0.35)] max-w-sm w-full p-8 border border-cream-border"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex items-center justify-center w-12 h-12 rounded-2xl bg-cream border border-cream-border mb-5 mx-auto">
-              <AlertTriangle className="w-5 h-5 text-ochre-deep" />
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl shadow-xl max-w-sm w-full p-6 animate-in zoom-in-95">
+            <div className="flex items-center justify-center w-12 h-12 rounded-full bg-rose-100 mb-4 mx-auto">
+              <AlertTriangle className="w-6 h-6 text-rose-600" />
             </div>
-            <p className="eyebrow text-center">Confirm</p>
-            <h3 className="font-sans text-xl font-semibold text-center text-ink mt-1 mb-2 tracking-tight">
-              Sign out of EduMark?
-            </h3>
-            <p className="text-center text-ink-muted text-sm mb-7 leading-relaxed">
-              You&apos;ll need to sign in again to access your records.
-            </p>
-            <div className="flex gap-3">
+            <h3 className="text-lg font-bold text-center text-slate-900 mb-2">Confirm Logout</h3>
+            <p className="text-center text-slate-500 text-sm mb-6">Are you sure you want to log out of your account?</p>
+            <div className="flex space-x-3">
               <button
                 onClick={() => setShowLogoutConfirm(false)}
-                className="flex-1 px-4 py-2.5 rounded-xl font-semibold text-ink bg-cream hover:bg-cream-soft border border-cream-border"
+                className="flex-1 px-4 py-2.5 rounded-xl font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 transition-colors"
               >
-                Stay
+                Cancel
               </button>
               <button
                 onClick={confirmLogout}
-                className="flex-1 px-4 py-2.5 rounded-xl font-semibold text-white bg-ochre hover:bg-ochre-deep"
+                className="flex-1 px-4 py-2.5 rounded-xl font-bold text-white bg-rose-600 hover:bg-rose-700 transition-colors"
               >
-                Sign out
+                Logout
               </button>
             </div>
           </div>

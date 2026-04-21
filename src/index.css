@@ -1,149 +1,36 @@
 @import "tailwindcss";
-@variant dark (&:where(.dark, .dark *));
-
-/* ---------------------------------------------------------
-   EduMark — dual-tone brand: indigo (primary) + cyan (accent)
-   ochre* keys kept for Tailwind class compatibility → indigo family
-   --color-card / --color-input: surfaces (dark mode overrides below)
---------------------------------------------------------- */
 
 @theme {
-  --font-sans: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
-  --font-serif: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
-
-  --color-ink: #09090b;
-  --color-ink-soft: #3f3f46;
-  --color-ink-muted: #71717a;
-
-  /* Warm off-white (Paper) to reduce glare without looking gray */
-  --color-paper: #faf9f6;
-  --color-paper-deep: #f5f4f1;
-
-  --color-cream: #f5f4f1;
-  --color-cream-soft: #ffffff;
-  --color-cream-border: #e6e4df;
-
-  /* Primary - Electric Blue Accent */
-  --color-ochre: #0070f3;
-  --color-ochre-soft: #60a5fa;
-  --color-ochre-deep: #005ae0;
-
-  /* Secondary - Zinc Black */
-  --color-aqua: #18181b;
-  --color-aqua-soft: #3f3f46;
-  --color-aqua-muted: #27272a;
-
-  /* Tertiary - Electric Blue */
-  --color-violet: #0070f3;
-  --color-violet-soft: #bfdbfe;
-
-  --color-card: #ffffff;
-  --color-input: #ffffff;
-
-  /* Solid fills */
-  --color-night: #18181b;
-  --color-night-soft: #27272a;
-
-  --radius-xl: 0.5rem;
-  --radius-2xl: 0.75rem;
-  --radius-3xl: 1rem;
-}
-
-@utility animate-spin-slow {
-  animation: spin 3s linear infinite;
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --radius-xl: 0.75rem;
+  --radius-2xl: 1rem;
+  --radius-3xl: 1.5rem;
 }
 
 @layer base {
-  html,
   body {
-    @apply text-ink antialiased;
-    font-feature-settings: "cv02", "cv03", "cv04", "cv11", "ss01";
-    background-color: var(--color-paper);
-  }
-
-  .font-serif {
-    letter-spacing: -0.02em;
-  }
-
-  ::selection {
-    background-color: color-mix(in srgb, var(--color-aqua) 28%, white);
-    color: var(--color-ink);
+    @apply text-slate-900 antialiased;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
   }
 }
 
-/* Dark theme: ink = foreground text; night = solid dark surfaces */
-.dark {
-  --color-ink: #fafafa;
-  --color-ink-soft: #a1a1aa;
-  --color-ink-muted: #71717a;
-
-  --color-paper: #09090b;
-  --color-paper-deep: #18181b;
-
-  --color-cream: #27272a;
-  --color-cream-soft: #18181b;
-  --color-cream-border: #3f3f46;
-
-  /* Primary - Electric Blue Accent */
-  --color-ochre: #3b82f6;
-  --color-ochre-soft: #93c5fd;
-  --color-ochre-deep: #2563eb;
-
-  /* Secondary - Zinc White */
-  --color-aqua: #fafafa;
-  --color-aqua-soft: #e4e4e7;
-  --color-aqua-muted: #d4d4d8;
-
-  /* Tertiary - Electric Blue */
-  --color-violet: #3b82f6;
-  --color-violet-soft: #1d4ed8;
-
-  --color-card: #18181b;
-  --color-input: #18181b;
-
-  /* Solid fills */
-  --color-night: #09090b;
-  --color-night-soft: #18181b;
-
-  color-scheme: dark;
-}
-
-
-
-.dark ::selection {
-  background-color: color-mix(in srgb, var(--color-aqua) 32%, transparent);
-  color: var(--color-ink);
-}
-
-/* Minimal scrollbar — barely there */
+/* Custom scrollbar for a cleaner look */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
 }
+
 ::-webkit-scrollbar-track {
-  background: transparent;
-}
-::-webkit-scrollbar-thumb {
-  background: var(--color-cream-border);
-  border-radius: 9999px;
-  transition: background 200ms ease;
-}
-::-webkit-scrollbar-thumb:hover {
-  background: color-mix(in srgb, var(--color-ochre) 45%, var(--color-aqua));
+  @apply bg-transparent;
 }
 
-/* Transitions on interactive elements */
-a,
-button,
-input,
-select,
-textarea {
-  transition:
-    background-color 200ms ease,
-    border-color 200ms ease,
-    color 200ms ease,
-    box-shadow 200ms ease,
-    transform 200ms ease;
+::-webkit-scrollbar-thumb {
+  @apply bg-slate-200 rounded-full hover:bg-slate-300 transition-colors;
+}
+
+/* Smooth transitions for all interactive elements */
+a, button, input, select {
+  @apply transition-all duration-200;
 }
 
 @layer utilities {
@@ -154,98 +41,5 @@ textarea {
     -ms-overflow-style: none;
     scrollbar-width: none;
   }
-
-  /* A subtle ruled paper effect for section dividers */
-  .rule-paper {
-    background-image: linear-gradient(
-      to right,
-      transparent 0,
-      var(--color-cream-border) 20%,
-      var(--color-cream-border) 80%,
-      transparent 100%
-    );
-    height: 1px;
-  }
-
-  /* Editorial small-caps label */
-  .eyebrow {
-    font-family: var(--font-sans);
-    font-weight: 600;
-    font-size: 0.6875rem;
-    letter-spacing: 0.18em;
-    text-transform: uppercase;
-    color: var(--color-ink-muted);
-  }
-
-  /* Tabular figures for numbers in cards & tables */
-  .tabular-nums {
-    font-variant-numeric: tabular-nums;
-  }
-
-  /* Solid primary color for hero words / emphasis */
-  .text-gradient-cool {
-    color: var(--color-ochre);
-  }
-
-  /* Thin line under sections */
-  .rule-spectrum {
-    height: 1px;
-    background: var(--color-cream-border);
-  }
-
-
 }
 
-/* ---------------------------------------------------------
-   Dynamic Color Themes
---------------------------------------------------------- */
-:root[data-color-theme="original"] {
-  --color-ink: #0c1222; --color-ink-soft: #1e293b; --color-ink-muted: #64748b;
-  --color-paper: #f0f4f8; --color-paper-deep: #e2e8f0; --color-cream: #e2e8f0; --color-cream-soft: #f8fafc; --color-cream-border: #c7d2e0;
-  --color-ochre: #1d4ed8; --color-ochre-soft: #60a5fa; --color-ochre-deep: #1e3a8a;
-  --color-aqua: #06b6d4; --color-aqua-soft: #67e8f9; --color-aqua-muted: #0891b2;
-  --color-violet: #8b5cf6; --color-violet-soft: #c4b5fd;
-  --color-card: #ffffff; --color-input: #ffffff; --color-night: #0c1222; --color-night-soft: #1e293b;
-}
-:root[data-color-theme="original"].dark {
-  --color-ink: #f9fafb; --color-ink-soft: #d1d5db; --color-ink-muted: #9ca3af;
-  --color-paper: #030712; --color-paper-deep: #111827; --color-cream: #1f2937; --color-cream-soft: #111827; --color-cream-border: #374151;
-  --color-ochre: #3b82f6; --color-ochre-soft: #93c5fd; --color-ochre-deep: #2563eb;
-  --color-aqua: #f9fafb; --color-aqua-soft: #e5e7eb; --color-aqua-muted: #d1d5db;
-  --color-violet: #a78bfa; --color-violet-soft: #c4b5fd;
-  --color-card: #111827; --color-input: #111827; --color-night: #030712; --color-night-soft: #111827;
-}
-
-:root[data-color-theme="emerald"] {
-  --color-ink: #1a1c1a; --color-ink-soft: #2f332f; --color-ink-muted: #6b7269;
-  --color-paper: #fcfbf8; --color-paper-deep: #f4f1e8; --color-cream: #f4f1e8; --color-cream-soft: #faf9f6; --color-cream-border: #e6e0d5;
-  --color-ochre: #10b981; --color-ochre-soft: #6ee7b7; --color-ochre-deep: #059669;
-  --color-aqua: #14b8a6; --color-aqua-soft: #5eead4; --color-aqua-muted: #0d9488;
-  --color-violet: #84cc16; --color-violet-soft: #d9f99d;
-  --color-card: #ffffff; --color-input: #ffffff; --color-night: #1a1c1a; --color-night-soft: #2f332f;
-}
-:root[data-color-theme="emerald"].dark {
-  --color-ink: #f0f2eb; --color-ink-soft: #caced5; --color-ink-muted: #8b938b;
-  --color-paper: #0b110c; --color-paper-deep: #101611; --color-cream: #18221a; --color-cream-soft: #121913; --color-cream-border: #263629;
-  --color-ochre: #34d399; --color-ochre-soft: #6ee7b7; --color-ochre-deep: #10b981;
-  --color-aqua: #2dd4bf; --color-aqua-soft: #5eead4; --color-aqua-muted: #14b8a6;
-  --color-violet: #a3e635; --color-violet-soft: #d9f99d;
-  --color-card: #131b14; --color-input: #0e140f; --color-night: #18201a; --color-night-soft: #233125;
-}
-
-:root[data-color-theme="violet"] {
-  --color-ink: #0f172a; --color-ink-soft: #334155; --color-ink-muted: #64748b;
-  --color-paper: #f8fafc; --color-paper-deep: #f1f5f9; --color-cream: #f1f5f9; --color-cream-soft: #ffffff; --color-cream-border: #e2e8f0;
-  --color-ochre: #8b5cf6; --color-ochre-soft: #c4b5fd; --color-ochre-deep: #7c3aed;
-  --color-aqua: #f97316; --color-aqua-soft: #fdba74; --color-aqua-muted: #ea580c;
-  --color-violet: #f43f5e; --color-violet-soft: #fda4af;
-  --color-card: #ffffff; --color-input: #ffffff; --color-night: #0f172a; --color-night-soft: #1e293b;
-}
-:root[data-color-theme="violet"].dark {
-  --color-ink: #f8fafc; --color-ink-soft: #cbd5e1; --color-ink-muted: #94a3b8;
-  --color-paper: #09090b; --color-paper-deep: #18181b; --color-cream: #27272a; --color-cream-soft: #18181b; --color-cream-border: #3f3f46;
-  --color-ochre: #a78bfa; --color-ochre-soft: #ddd6fe; --color-ochre-deep: #8b5cf6;
-  --color-aqua: #fb923c; --color-aqua-soft: #fed7aa; --color-aqua-muted: #f97316;
-  --color-violet: #fb7185; --color-violet-soft: #fecdd3;
-  --color-card: #18181b; --color-input: #18181b; --color-night: #09090b; --color-night-soft: #18181b;
-}

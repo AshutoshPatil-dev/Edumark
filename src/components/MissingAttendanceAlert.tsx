@@ -1,9 +1,7 @@
 import { useState, useEffect } from 'react';
-import { AlertCircle, CheckCircle2, XCircle, Clock, ChevronDown, ChevronUp, ClipboardCheck } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { AlertCircle, CheckCircle2, XCircle, Clock, ChevronDown, ChevronUp } from 'lucide-react';
 import { supabase } from '../lib/supabase';
-import type { Student, Profile, TimetableEntry } from '../types';
-import { useSync } from '../context/SyncContext';
+import type { Student, Profile, TimetableEntry, AttendanceLog } from '../types';
 
 interface MissingAttendanceAlertProps {
   students: Student[];
@@ -20,8 +18,6 @@ interface MissingEntry {
 }
 
 export default function MissingAttendanceAlert({ students, profile, refreshData }: MissingAttendanceAlertProps) {
-  const navigate = useNavigate();
-  const { isOnline, addToQueue } = useSync();
   const [missingList, setMissingList] = useState<MissingEntry[]>([]);
   const [expanded, setExpanded] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -30,6 +26,7 @@ export default function MissingAttendanceAlert({ students, profile, refreshData 
     if (profile.role !== 'faculty' && profile.role !== 'admin') return;
 
     const calculateMissing = async () => {
+      // Fetch timetable for this faculty
       const { data: timetableData } = await supabase
         .from('timetable')
         .select('*')
@@ -37,40 +34,24 @@ export default function MissingAttendanceAlert({ students, profile, refreshData 
 
       if (!timetableData || timetableData.length === 0) return;
 
+      // Fetch logs for this faculty
       const { data: logsData } = await supabase
-        .from('admin_logs')
+        .from('attendance_logs')
         .select('*')
-        .eq('actor_id', profile.id)
-        .eq('category', 'attendance');
+        .eq('faculty_id', profile.id);
 
-      // Parse details field to reconstruct comparable log info
-      interface ParsedLog { date: string; subject_id: string; division: string; batch?: string; lecture_no?: string; action: string; }
-      const logs: ParsedLog[] = (logsData || []).map((r: any) => {
-        // Details format: "SUBJ · Div X · Batch Y · L2 · 2026-04-19"
-        const parts = (r.details || '').split(' · ');
-        const dateStr = parts.find((p: string) => /^\d{4}-\d{2}-\d{2}$/.test(p)) || '';
-        const divPart = parts.find((p: string) => p.startsWith('Div '));
-        const batchPart = parts.find((p: string) => p.startsWith('Batch '));
-        const lecPart = parts.find((p: string) => p.startsWith('Lecture '));
-        return {
-          date: dateStr,
-          subject_id: parts[0] || '',
-          division: divPart ? divPart.replace('Div ', '') : '',
-          batch: batchPart ? batchPart.replace('Batch ', '') : undefined,
-          lecture_no: lecPart ? lecPart.replace('Lecture ', '') : undefined,
-          action: r.action || '',
-        };
-      });
+      const logs = (logsData || []) as AttendanceLog[];
       const timetable = timetableData as TimetableEntry[];
 
       const pastDays: { date: string, dayOfWeek: number }[] = [];
       const d = new Date();
       d.setHours(0, 0, 0, 0);
-
+      
+      // Get last 5 weekdays
       while (pastDays.length < 5) {
         d.setDate(d.getDate() - 1);
         const dayOfWeek = d.getDay();
-        if (dayOfWeek !== 0 && dayOfWeek !== 6) {
+        if (dayOfWeek !== 0 && dayOfWeek !== 6) { // Skip Sunday(0) and Saturday(6)
           const year = d.getFullYear();
           const month = String(d.getMonth() + 1).padStart(2, '0');
           const day = String(d.getDate()).padStart(2, '0');
@@ -82,14 +63,17 @@ export default function MissingAttendanceAlert({ students, profile, refreshData 
       const missing: MissingEntry[] = [];
 
       pastDays.forEach(day => {
+        // Find all lectures this faculty was supposed to teach on this day of the week
         const dayTimetable = timetable.filter(t => {
           if (t.day_of_week !== day.dayOfWeek) return false;
           if (profile.role !== 'admin' && !(profile.assigned_subjects || []).includes(t.subject_id)) return false;
           return true;
         });
-
+        
+        // Group practicals so we only check the first lecture of a block (consecutive lectures)
         const processedTimetable: typeof dayTimetable = [];
-
+        
+        // Sort by subject, division, batch, then lecture_no to ensure consecutive grouping works even with interleaved batches
         const sortedTimetable = [...dayTimetable].sort((a, b) => {
           if (a.subject_id !== b.subject_id) return a.subject_id.localeCompare(b.subject_id);
           if (a.division !== b.division) return a.division.localeCompare(b.division);
@@ -98,16 +82,18 @@ export default function MissingAttendanceAlert({ students, profile, refreshData 
           if (batchA !== batchB) return batchA.localeCompare(batchB);
           return a.lecture_no - b.lecture_no;
         });
-
+        
         sortedTimetable.forEach(t => {
           const isPractical = t.subject_id.endsWith('L') || t.subject_id === 'PBL';
           if (isPractical) {
+            // Check if the previous lecture in the processed list is part of the same block
             const prev = processedTimetable[processedTimetable.length - 1];
-            if (prev &&
-                prev.subject_id === t.subject_id &&
-                prev.division === t.division &&
-                prev.batch === t.batch &&
+            if (prev && 
+                prev.subject_id === t.subject_id && 
+                prev.division === t.division && 
+                prev.batch === t.batch && 
                 prev.lecture_no === t.lecture_no - 1) {
+              // It's consecutive, so we skip adding it (it's part of the same block)
               return;
             }
             processedTimetable.push(t);
@@ -120,25 +106,28 @@ export default function MissingAttendanceAlert({ students, profile, refreshData 
           const key = `${day.date}_${t.subject_id}_${t.division}_${t.lecture_no}_${t.batch || ''}`;
           if (ignored.includes(key)) return;
 
-          const isLogged = logs.some(l =>
-            l.date === day.date &&
-            l.subject_id === t.subject_id &&
+          // Check if an action was logged (Holiday / No Lecture) for this date/subject/division/batch/lecture
+          const isLogged = logs.some(l => 
+            l.date === day.date && 
+            l.subject_id === t.subject_id && 
             l.division === t.division &&
-            (l.batch === t.batch || (!l.batch && !t.batch))
+            (l.batch === t.batch || (!l.batch && !t.batch)) &&
+            (!l.notes || l.notes === t.lecture_no.toString())
           );
-
+          
           if (isLogged) return;
 
+          // Check if attendance was marked for this specific division, subject, date, lecture, and batch
           const studentsInDiv = students.filter(s => s.division === t.division && (!t.batch || s.batch === t.batch));
-          const hasAttendance = studentsInDiv.some(s =>
+          const hasAttendance = studentsInDiv.some(s => 
             s.attendance[t.subject_id]?.some(a => a.date === day.date && a.lectureNo === t.lecture_no)
           );
 
           if (!hasAttendance && studentsInDiv.length > 0) {
-            missing.push({
-              date: day.date,
-              subjectId: t.subject_id,
-              division: t.division,
+            missing.push({ 
+              date: day.date, 
+              subjectId: t.subject_id, 
+              division: t.division, 
               lectureNo: t.lecture_no,
               batch: t.batch
             });
@@ -146,6 +135,7 @@ export default function MissingAttendanceAlert({ students, profile, refreshData 
         });
       });
 
+      // Sort by date descending
       missing.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
       setMissingList(missing);
     };
@@ -158,30 +148,26 @@ export default function MissingAttendanceAlert({ students, profile, refreshData 
     const ignored = JSON.parse(localStorage.getItem(`edumark_ignored_attendance_${profile.id}`) || '[]');
     ignored.push(key);
     localStorage.setItem(`edumark_ignored_attendance_${profile.id}`, JSON.stringify(ignored));
-
+    
     setMissingList(prev => prev.filter(m => !(m.date === entry.date && m.subjectId === entry.subjectId && m.division === entry.division && m.lectureNo === entry.lectureNo && m.batch === entry.batch)));
   };
 
   const handleLogAction = async (entry: MissingEntry, action: string) => {
     setIsLoading(true);
-    const details = [
-      entry.subjectId,
-      `Div ${entry.division}`,
-      entry.batch ? `Batch ${entry.batch}` : null,
-      `Lecture ${entry.lectureNo}`,
-      entry.date,
-    ].filter(Boolean).join(' · ');
-
     try {
-      const { error } = await supabase.from('admin_logs').insert({
-        actor_id: profile.id,
-        category: 'attendance',
+      const { error } = await supabase.from('attendance_logs').insert({
+        date: entry.date,
+        subject_id: entry.subjectId,
+        division: entry.division,
+        batch: entry.batch || null,
+        faculty_id: profile.id,
         action: action,
-        details: details,
+        notes: entry.lectureNo.toString()
       });
 
       if (error) throw error;
 
+      // Remove from missing list
       setMissingList(prev => prev.filter(m => !(m.date === entry.date && m.subjectId === entry.subjectId && m.division === entry.division && m.lectureNo === entry.lectureNo && m.batch === entry.batch)));
     } catch (err: any) {
       console.error('Error logging action:', err);
@@ -200,22 +186,9 @@ export default function MissingAttendanceAlert({ students, profile, refreshData 
         subject: entry.subjectId,
         date: entry.date,
         lecture_no: entry.lectureNo,
-        status: 1,
+        status: 1, // Present
         marked_by: profile.id
       }));
-
-      if (!isOnline) {
-        await addToQueue('attendance', records);
-        const key = `${entry.date}_${entry.subjectId}_${entry.division}_${entry.lectureNo}_${entry.batch || ''}`;
-        const ignored = JSON.parse(localStorage.getItem(`edumark_ignored_attendance_${profile.id}`) || '[]');
-        if (!ignored.includes(key)) {
-          ignored.push(key);
-          localStorage.setItem(`edumark_ignored_attendance_${profile.id}`, JSON.stringify(ignored));
-        }
-        setMissingList(prev => prev.filter(m => !(m.date === entry.date && m.subjectId === entry.subjectId && m.division === entry.division && m.lectureNo === entry.lectureNo && m.batch === entry.batch)));
-        setIsLoading(false);
-        return;
-      }
 
       const { error } = await supabase.from('attendance').upsert(records, {
         onConflict: 'student_id, subject, date, lecture_no'
@@ -223,6 +196,7 @@ export default function MissingAttendanceAlert({ students, profile, refreshData 
 
       if (error) throw error;
 
+      // Also add to ignored list so it doesn't pop up again if they delete the records later
       const key = `${entry.date}_${entry.subjectId}_${entry.division}_${entry.lectureNo}_${entry.batch || ''}`;
       const ignored = JSON.parse(localStorage.getItem(`edumark_ignored_attendance_${profile.id}`) || '[]');
       if (!ignored.includes(key)) {
@@ -242,25 +216,22 @@ export default function MissingAttendanceAlert({ students, profile, refreshData 
   if (missingList.length === 0) return null;
 
   return (
-    <div className="bg-card border border-cream-border rounded-3xl p-5 md:p-6 mb-8 relative overflow-hidden">
-      <div className="flex items-start justify-between gap-4">
-        <div className="flex items-start gap-3">
-          <div className="bg-ochre/10 p-2.5 rounded-xl border border-ochre/20 shrink-0">
-            <AlertCircle className="w-5 h-5 text-ochre" />
+    <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 mb-8 shadow-sm">
+      <div className="flex items-start justify-between">
+        <div className="flex items-start space-x-3">
+          <div className="bg-amber-100 p-2 rounded-xl mt-0.5">
+            <AlertCircle className="w-5 h-5 text-amber-600" />
           </div>
           <div>
-            <p className="eyebrow text-ink-muted">Needs attention</p>
-            <h3 className="font-sans text-lg font-semibold text-ink mt-1 tracking-tight">
-              Unmarked class sessions
-            </h3>
-            <p className="text-ink-muted text-sm mt-1.5 leading-relaxed">
-              <span className="tabular-nums font-semibold text-ink">{missingList.length}</span> lecture{missingList.length > 1 ? 's' : ''} in the last week have no attendance saved yet.
+            <h3 className="text-amber-900 font-bold">Missing Attendance Records</h3>
+            <p className="text-amber-700 text-sm mt-1">
+              You have {missingList.length} unmarked lecture{missingList.length > 1 ? 's' : ''} from the past week.
             </p>
           </div>
         </div>
-        <button
+        <button 
           onClick={() => setExpanded(!expanded)}
-          className="flex items-center gap-1.5 text-ink hover:text-ochre-deep bg-cream hover:bg-cream-soft border border-cream-border px-3 py-2 rounded-xl text-[0.8125rem] font-semibold shrink-0"
+          className="flex items-center space-x-1 text-amber-700 hover:text-amber-900 hover:bg-amber-100 px-3 py-1.5 rounded-lg transition-colors text-sm font-semibold"
         >
           <span>{expanded ? 'Hide' : 'Review'}</span>
           {expanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
@@ -268,66 +239,50 @@ export default function MissingAttendanceAlert({ students, profile, refreshData 
       </div>
 
       {expanded && (
-        <div className="mt-5 space-y-2">
+        <div className="mt-4 space-y-2">
           {missingList.map(m => {
             const [y, month, d] = m.date.split('-');
             const dateObj = new Date(parseInt(y), parseInt(month) - 1, parseInt(d));
             const formattedDate = dateObj.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
-
+            
             return (
-              <div key={`${m.date}_${m.subjectId}_${m.division}_${m.lectureNo}_${m.batch || ''}`} className="flex flex-col sm:flex-row sm:items-center justify-between bg-paper p-4 rounded-2xl border border-cream-border gap-3">
-                <div className="flex items-center gap-3">
-                  <span className="w-1.5 h-1.5 rounded-full bg-ochre shrink-0" />
+              <div key={`${m.date}_${m.subjectId}_${m.division}_${m.lectureNo}_${m.batch || ''}`} className="flex flex-col sm:flex-row sm:items-center justify-between bg-white p-3 rounded-xl border border-amber-100 shadow-sm gap-3">
+                <div className="flex items-center space-x-3">
+                  <div className="w-2 h-2 rounded-full bg-amber-400"></div>
                   <div>
-                    <span className="font-semibold text-ink">{formattedDate}</span>
-                    <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
-                      <span className="text-ink text-[0.6875rem] font-semibold px-2 py-0.5 bg-cream border border-cream-border rounded">{m.subjectId}</span>
-                      <span className="text-ink text-[0.6875rem] font-semibold px-2 py-0.5 bg-ochre/10 border border-ochre/30 rounded">Div {m.division}</span>
-                      {m.batch && <span className="text-ochre-deep text-[0.6875rem] font-semibold px-2 py-0.5 bg-ochre/10 border border-ochre/30 rounded">Batch {m.batch}</span>}
-                      <span className="text-ink-muted text-[0.6875rem] font-medium">Lecture {m.lectureNo}</span>
+                    <span className="font-bold text-slate-800">{formattedDate}</span>
+                    <div className="flex items-center space-x-2 mt-1">
+                      <span className="text-slate-500 text-xs font-medium px-2 py-0.5 bg-slate-100 rounded-md">{m.subjectId}</span>
+                      <span className="text-indigo-600 text-xs font-bold px-2 py-0.5 bg-indigo-50 rounded-md">Div {m.division}</span>
+                      {m.batch && <span className="text-amber-600 text-xs font-bold px-2 py-0.5 bg-amber-50 rounded-md">Batch {m.batch}</span>}
+                      <span className="text-slate-500 text-xs font-medium">Lec {m.lectureNo}</span>
                     </div>
                   </div>
                 </div>
-                <div className="flex flex-wrap gap-2 mt-2 sm:mt-0">
-                  <button
-                    onClick={() => {
-                      const params = new URLSearchParams({
-                        subject: m.subjectId,
-                        division: m.division,
-                        date: m.date,
-                        lecture: String(m.lectureNo),
-                      });
-                      if (m.batch) params.set('batch', m.batch);
-                      navigate(`/attendance?${params.toString()}`);
-                    }}
-                    className="flex items-center gap-1.5 text-[0.8125rem] bg-night text-white border border-night px-3.5 py-2 rounded-xl hover:bg-night-soft font-semibold"
-                  >
-                    <ClipboardCheck className="w-3.5 h-3.5" />
-                    <span>Mark now</span>
-                  </button>
-                  <button
+                <div className="flex flex-wrap gap-2 mt-3 sm:mt-0">
+                  <button 
                     onClick={() => handleMarkAllPresent(m)}
                     disabled={isLoading}
-                    className="flex items-center gap-1.5 text-[0.8125rem] bg-ochre text-white border border-ochre px-3.5 py-2 rounded-xl hover:bg-ochre-deep font-semibold disabled:opacity-50"
+                    className="flex items-center space-x-1.5 text-sm bg-emerald-50 text-emerald-700 border border-emerald-200 px-4 py-2.5 rounded-xl hover:bg-emerald-100 font-bold transition-colors disabled:opacity-50"
                   >
-                    <CheckCircle2 className="w-3.5 h-3.5" />
-                    <span>All present</span>
+                    <CheckCircle2 className="w-4 h-4" />
+                    <span>Mark All Present</span>
                   </button>
-                  <button
+                  <button 
                     onClick={() => handleLogAction(m, 'Holiday / No Lecture')}
                     disabled={isLoading}
-                    className="flex items-center gap-1.5 text-[0.8125rem] bg-card text-ink border border-cream-border px-3.5 py-2 rounded-xl hover:border-ochre/40 font-semibold disabled:opacity-50"
+                    className="flex items-center space-x-1.5 text-sm bg-slate-50 text-slate-700 border border-slate-200 px-4 py-2.5 rounded-xl hover:bg-slate-100 font-bold transition-colors disabled:opacity-50"
                   >
-                    <XCircle className="w-3.5 h-3.5" />
-                    <span>Holiday</span>
+                    <XCircle className="w-4 h-4" />
+                    <span>Holiday / No Lecture</span>
                   </button>
-                  <button
+                  <button 
                     onClick={() => handleIgnore(m)}
                     disabled={isLoading}
-                    className="flex items-center gap-1.5 text-[0.8125rem] bg-card text-ink-muted border border-cream-border px-3.5 py-2 rounded-xl hover:text-ink font-semibold disabled:opacity-50"
+                    className="flex items-center space-x-1.5 text-sm bg-white text-slate-500 border border-slate-200 px-4 py-2.5 rounded-xl hover:bg-slate-50 font-bold transition-colors disabled:opacity-50"
                   >
-                    <Clock className="w-3.5 h-3.5" />
-                    <span>Later</span>
+                    <Clock className="w-4 h-4" />
+                    <span>Mark Later</span>
                   </button>
                 </div>
               </div>

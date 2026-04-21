@@ -1,49 +1,29 @@
 <!doctype html>
 <html lang="en">
   <head>
-    <script>
-      (function () {
-        try {
-          var k = 'edumark-theme';
-          var s = localStorage.getItem(k);
-          var d = window.matchMedia('(prefers-color-scheme: dark)').matches;
-          var mode = s === 'light' || s === 'dark' ? s : d ? 'dark' : 'light';
-          document.documentElement.classList.toggle('dark', mode === 'dark');
-        } catch (e) {}
-      })();
-    </script>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="theme-color" content="#09090b" media="(prefers-color-scheme: dark)" />
-    <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)" />
-    <link rel="apple-touch-icon" href="/pwa-192.png" />
-    <title>EduMark - Attendance for your institution</title>
-    <meta name="description" content="EduMark helps schools and colleges mark attendance, track at-risk students, and export class reports in one place." />
+    <title>EduMark - Smart Attendance Management System</title>
+    <meta name="description" content="EduMark is a modern, smart attendance management system for educational institutions. Track student attendance, generate reports, and monitor academic performance." />
     <meta name="keywords" content="attendance management, student tracking, education software, EduMark, school management" />
     <meta name="author" content="EduMark" />
-    <meta name="robots" content="noindex, nofollow" />
-
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap"
-      rel="stylesheet"
-    />
-
+    <meta name="google-site-verification" content="NVkruthVa4Yr9PYVtTcUfh8l7j1wDRdXlip9nIo4V4k" />
+    
     <!-- Open Graph / Facebook -->
     <meta property="og:type" content="website" />
     <meta property="og:url" content="https://edumark-app.netlify.app/" />
-    <meta property="og:title" content="EduMark - Attendance for your institution" />
-    <meta property="og:description" content="Track class attendance, spot at-risk students, and export the records your school needs." />
-
+    <meta property="og:title" content="EduMark - Smart Attendance Management System" />
+    <meta property="og:description" content="Modern attendance tracking and performance analytics for educational institutions." />
+    
     <!-- Twitter -->
     <meta property="twitter:card" content="summary_large_image" />
     <meta property="twitter:url" content="https://edumark-app.netlify.app/" />
-    <meta property="twitter:title" content="EduMark - Attendance for your institution" />
-    <meta property="twitter:description" content="Track class attendance, spot at-risk students, and export the records your school needs." />
+    <meta property="twitter:title" content="EduMark - Smart Attendance Management System" />
+    <meta property="twitter:description" content="Modern attendance tracking and performance analytics for educational institutions." />
   </head>
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
+

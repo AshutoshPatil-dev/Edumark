@@ -1,12 +1,12 @@
-import { useState, useMemo, useEffect } from 'react';
-import { Student } from '../types';
+import React, { useState, useMemo, useEffect } from 'react';
+import { Student, Profile } from '../types';
 import { Filter, Calendar, Clock, User, CheckCircle2, XCircle } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { cn } from '../utils/attendance';
 
 interface AttendanceLogsProps {
   students: Student[];
-  studentId?: string;
+  studentId?: string; // If provided, filter by this student
   className?: string;
   compact?: boolean;
 }
@@ -27,6 +27,7 @@ export function AttendanceLogs({ students, studentId, className, compact = false
   const [filterSubject, setFilterSubject] = useState<string>('all');
   const [profiles, setProfiles] = useState<Record<string, string>>({});
 
+  // Fetch profiles to map marked_by UUID to full_name
   useEffect(() => {
     const fetchProfiles = async () => {
       const { data } = await supabase.from('profiles').select('id, full_name');
@@ -43,8 +44,8 @@ export function AttendanceLogs({ students, studentId, className, compact = false
 
   const logs = useMemo(() => {
     const allLogs: LogEntry[] = [];
-
-    const targetStudents = studentId
+    
+    const targetStudents = studentId 
       ? students.filter(s => s.id === studentId)
       : students;
 
@@ -65,6 +66,7 @@ export function AttendanceLogs({ students, studentId, className, compact = false
       });
     });
 
+    // Sort by date descending, then lectureNo descending
     return allLogs.sort((a, b) => {
       const dateDiff = b.date.localeCompare(a.date);
       if (dateDiff !== 0) return dateDiff;
@@ -88,31 +90,31 @@ export function AttendanceLogs({ students, studentId, className, compact = false
   }, [logs]);
 
   return (
-    <div className={cn("bg-card rounded-3xl border border-cream-border flex flex-col overflow-hidden", className)}>
-      <div className="px-4 py-3.5 border-b border-cream-border flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <div className="flex items-center gap-2">
-          <Clock className="w-4 h-4 text-ochre" />
-          <p className="eyebrow">{compact ? 'Recent logs' : 'The Ledger'}</p>
+    <div className={cn("bg-white rounded-2xl border border-slate-100 shadow-sm flex flex-col", className)}>
+      <div className="p-4 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="flex items-center space-x-2">
+          <Clock className="w-5 h-5 text-blue-500" />
+          <h3 className="font-bold text-slate-800">{compact ? 'Recent Logs' : 'Attendance Logs'}</h3>
         </div>
-
-        <div className="flex items-center gap-2 text-[0.8125rem]">
+        
+        <div className="flex items-center gap-2 text-sm">
           <select
             value={filterStatus}
             onChange={(e) => setFilterStatus(e.target.value as any)}
-            className="bg-paper border border-cream-border text-ink rounded-lg px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-ochre/20 font-medium"
+            className="bg-slate-50 border border-slate-200 text-slate-700 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
           >
-            <option value="all">All status</option>
-            <option value="present">Present</option>
-            <option value="absent">Absent</option>
+            <option value="all">All Status</option>
+            <option value="present">Present Only</option>
+            <option value="absent">Absent Only</option>
           </select>
-
+          
           {!compact && (
             <select
               value={filterSubject}
               onChange={(e) => setFilterSubject(e.target.value)}
-              className="bg-paper border border-cream-border text-ink rounded-lg px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-ochre/20 max-w-[120px] font-medium"
+              className="bg-slate-50 border border-slate-200 text-slate-700 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-500/20 max-w-[120px]"
             >
-              <option value="all">All subjects</option>
+              <option value="all">All Subjects</option>
               {uniqueSubjects.map(sub => (
                 <option key={sub} value={sub}>{sub}</option>
               ))}
@@ -123,57 +125,52 @@ export function AttendanceLogs({ students, studentId, className, compact = false
 
       <div className="flex-1 overflow-y-auto p-2">
         {filteredLogs.length === 0 ? (
-          <div className="p-8 text-center text-ink-muted">
-            <Filter className="w-7 h-7 mx-auto mb-2 opacity-30" />
-            <p className="text-sm font-medium">No logs match these filters</p>
+          <div className="p-8 text-center text-slate-400">
+            <Filter className="w-8 h-8 mx-auto mb-2 opacity-20" />
+            <p className="text-sm font-medium">No logs found matching filters</p>
           </div>
         ) : (
-          <div className="space-y-1">
+          <div className="space-y-2">
             {filteredLogs.map((log, idx) => (
-              <div key={idx} className="p-3 rounded-xl hover:bg-paper border border-transparent hover:border-cream-border flex items-start sm:items-center justify-between gap-4">
-                <div className="flex items-start sm:items-center gap-3 min-w-0">
+              <div key={idx} className="p-3 rounded-xl hover:bg-slate-50 border border-transparent hover:border-slate-100 transition-colors flex items-start sm:items-center justify-between gap-4">
+                <div className="flex items-start sm:items-center gap-3">
                   <div className={cn(
-                    "w-7 h-7 rounded-lg flex items-center justify-center shrink-0 border",
-                    log.status === 1
-                      ? "bg-emerald-50 text-emerald-700 border-emerald-200/70"
-                      : "bg-rose-50 text-rose-700 border-rose-200/70"
+                    "w-8 h-8 rounded-full flex items-center justify-center shrink-0",
+                    log.status === 1 ? "bg-emerald-100 text-emerald-600" : "bg-rose-100 text-rose-600"
                   )}>
-                    {log.status === 1 ? <CheckCircle2 className="w-3.5 h-3.5" /> : <XCircle className="w-3.5 h-3.5" />}
+                    {log.status === 1 ? <CheckCircle2 className="w-4 h-4" /> : <XCircle className="w-4 h-4" />}
                   </div>
-                  <div className="min-w-0">
+                  <div>
                     {!studentId && (
-                      <p className="font-semibold text-[0.8125rem] text-ink leading-tight truncate">
-                        {log.studentName}
-                        <span className="text-ink-muted font-medium text-[0.6875rem] ml-1.5 tracking-wide">
-                          {log.studentRollNo}
-                        </span>
+                      <p className="font-bold text-sm text-slate-800 leading-tight">
+                        {log.studentName} <span className="text-slate-400 font-normal text-xs">({log.studentRollNo})</span>
                       </p>
                     )}
-                    <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1 mt-1 text-[0.6875rem] text-ink-muted font-medium">
+                    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1 text-xs text-slate-500 font-medium">
                       <span className="flex items-center gap-1">
                         <Calendar className="w-3 h-3" />
                         {log.date}
                       </span>
                       <span className="flex items-center gap-1">
                         <Clock className="w-3 h-3" />
-                        L{log.lectureNo}
+                        Lec {log.lectureNo}
                       </span>
-                      <span className="px-1.5 py-0.5 bg-cream border border-cream-border rounded text-ink font-semibold uppercase tracking-wider text-[0.625rem]">
+                      <span className="px-1.5 py-0.5 bg-slate-100 rounded text-slate-600">
                         {log.subject}
                       </span>
                     </div>
                   </div>
                 </div>
-
+                
                 <div className="text-right shrink-0">
                   <p className={cn(
-                    "text-[0.6875rem] font-semibold uppercase tracking-[0.15em]",
-                    log.status === 1 ? "text-emerald-700" : "text-rose-700"
+                    "text-xs font-bold uppercase tracking-wider",
+                    log.status === 1 ? "text-emerald-600" : "text-rose-600"
                   )}>
                     {log.status === 1 ? 'Present' : 'Absent'}
                   </p>
-                  <p className="text-[0.625rem] text-ink-muted mt-0.5 flex items-center justify-end gap-1">
-                    <User className="w-2.5 h-2.5" />
+                  <p className="text-[10px] text-slate-400 mt-1 flex items-center justify-end gap-1">
+                    <User className="w-3 h-3" />
                     {log.markedByName}
                   </p>
                 </div>
