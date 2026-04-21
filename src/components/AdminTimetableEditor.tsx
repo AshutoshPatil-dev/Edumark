@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabase';
 import { DIVISIONS, SUBJECTS, type DivisionId } from '../constants';
 import { Calendar, Plus, Edit2, Trash2 } from 'lucide-react';
 import { cn } from '../utils/attendance';
+import { writeAdminLog } from '../utils/admin';
 
 export default function AdminTimetableEditor() {
   const [selectedDivision, setSelectedDivision] = useState<DivisionId>('A');
@@ -71,6 +72,17 @@ export default function AdminTimetableEditor() {
     
     setIsModalOpen(false);
     fetchData();
+
+    // Log the change
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) {
+      await writeAdminLog(
+        user.id,
+        'timetable',
+        editingSlot.id ? 'Updated timetable slot' : 'Added timetable slot',
+        `${formSubject} | Day ${editingSlot.day}, Lec ${editingSlot.lectureNo} | Div ${selectedDivision}${formBatch ? `, Batch ${formBatch}` : ''}`
+      );
+    }
   };
 
   const handleDeleteSlot = async () => {
@@ -78,6 +90,17 @@ export default function AdminTimetableEditor() {
       await supabase.from('timetable').delete().eq('id', editingSlot.id);
       setIsModalOpen(false);
       fetchData();
+
+      // Log the deletion
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        await writeAdminLog(
+          user.id,
+          'timetable',
+          'Deleted timetable slot',
+          `Removed slot | Day ${editingSlot.day}, Lec ${editingSlot.lectureNo} | Div ${selectedDivision}`
+        );
+      }
     }
   };
 
@@ -99,11 +122,11 @@ export default function AdminTimetableEditor() {
         <table className="w-full text-left border-collapse min-w-[800px]">
           <thead>
             <tr>
-              <th className="w-32 p-3 bg-paper border-b border-r border-cream-border text-center text-xs font-semibold uppercase tracking-wider text-ink-muted">
+              <th className="w-32 p-3 bg-paper border-b border-r border-cream-border text-center text-xs font-semibold uppercase tracking-wider text-ink">
                 Day
               </th>
               {Array.from({ length: maxLectures }).map((_, i) => (
-                <th key={i} className="p-3 bg-paper border-b border-cream-border text-center text-xs font-semibold uppercase tracking-wider text-ink-muted">
+                <th key={i} className="p-3 bg-paper border-b border-cream-border text-center text-xs font-semibold uppercase tracking-wider text-ink">
                   Lecture {i + 1}
                 </th>
               ))}
@@ -114,7 +137,7 @@ export default function AdminTimetableEditor() {
               const dayNum = r + 1;
               return (
                 <tr key={day}>
-                  <td className="p-3 border-r border-b border-cream-border text-center font-bold text-ink-muted bg-paper/50">
+                  <td className="p-3 border-r border-b border-cream-border text-center font-bold text-ink bg-paper/50">
                     {day}
                   </td>
                   {Array.from({ length: maxLectures }).map((_, c) => {
@@ -128,7 +151,7 @@ export default function AdminTimetableEditor() {
                             onClick={() => handleCellClick(dayNum, lectureNo, slot)}
                             className="group relative bg-ochre/10 border border-ochre/20 hover:border-ochre/50 rounded-xl p-2 cursor-pointer transition-all"
                           >
-                            <p className="font-semibold text-ochre-deep text-sm">{slot.subject_id}</p>
+                            <p className="font-semibold text-ink dark:text-white/75 text-sm">{slot.subject_id}</p>
                             <p className="text-xs text-ink-muted truncate mt-0.5">
                               {profiles.find(p => p.id === slot.faculty_id)?.full_name || 'Unknown'}
                             </p>

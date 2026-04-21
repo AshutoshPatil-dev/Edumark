@@ -82,9 +82,9 @@ export default function DashboardPage({ students }: DashboardPageProps) {
         return null;
       })
       .filter((s) => s !== null) as (Student & {
-      avgScore: number;
-      status: string;
-    })[];
+        avgScore: number;
+        status: string;
+      })[];
 
     return {
       avgAttendance: studentCount > 0 ? totalScore / studentCount : 0,
@@ -95,47 +95,39 @@ export default function DashboardPage({ students }: DashboardPageProps) {
         name,
         value,
       })),
-      atRiskStudents: atRiskStudents.sort((a, b) => a.avgScore - b.avgScore).slice(0, 5),
+      atRiskStudents: atRiskStudents.sort((a, b) => a.avgScore - b.avgScore).slice(0, 15),
     };
   }, [students, selectedDivision]);
 
   const COLORS = useMemo(
-    () =>
-      theme === 'dark'
-        ? {
-            Excellent: '#e2e8f0',
-            Good: '#22d3ee',
-            Risky: '#fbbf24',
-            Critical: '#fb7185',
-          }
-        : {
-            Excellent: '#0c1222',
-            Good: '#06b6d4',
-            Risky: '#d97706',
-            Critical: '#be123c',
-          },
-    [theme],
+    () => ({
+      Excellent: '#10b981',
+      Good: '#3b82f6',
+      Risky: '#f97316',
+      Critical: '#ef4444',
+    }),
+    [],
   );
 
   const chartChrome = useMemo(
     () =>
       theme === 'dark'
         ? {
-            grid: '#2a3648',
-            tick: '#94a3b8',
-            cursor: 'rgba(34, 211, 238, 0.08)',
-            tooltipBg: '#141c27',
-            tooltipBorder: '#2a3648',
-            tooltipShadow: '0 10px 30px -12px rgba(0,0,0,0.45)',
-          }
+          grid: '#2a3648',
+          tick: '#94a3b8',
+          cursor: 'rgba(34, 211, 238, 0.08)',
+          tooltipBg: '#141c27',
+          tooltipBorder: '#2a3648',
+          tooltipShadow: '0 10px 30px -12px rgba(0,0,0,0.45)',
+        }
         : {
-            grid: '#cbd5e1',
-            tick: '#64748b',
-            cursor: '#eff6ff',
-            tooltipBg: '#f8fafc',
-            tooltipBorder: '#cbd5e1',
-            tooltipShadow: '0 10px 30px -12px rgba(11,15,25,0.15)',
-          },
+          grid: '#cbd5e1',
+          tick: '#64748b',
+          cursor: '#eff6ff',
+          tooltipBg: '#f8fafc',
+          tooltipBorder: '#cbd5e1',
+          tooltipShadow: '0 10px 30px -12px rgba(11,15,25,0.15)',
+        },
     [theme],
   );
 
@@ -200,7 +192,7 @@ export default function DashboardPage({ students }: DashboardPageProps) {
               </div>
               <ChevronDown className={cn("w-4 h-4 text-ink/40 transition-transform duration-200", isDropdownOpen && "rotate-180")} />
             </button>
-            
+
             <AnimatePresence>
               {isDropdownOpen && (
                 <motion.div
@@ -338,14 +330,24 @@ export default function DashboardPage({ students }: DashboardPageProps) {
                 />
                 <Tooltip
                   cursor={{ fill: chartChrome.cursor }}
-                  contentStyle={{
-                    borderRadius: '12px',
-                    border: `1px solid ${chartChrome.tooltipBorder}`,
-                    background: chartChrome.tooltipBg,
-                    boxShadow: chartChrome.tooltipShadow,
-                    fontFamily: 'Plus Jakarta Sans, system-ui, sans-serif',
-                    fontSize: 12,
-                    color: theme === 'dark' ? '#e8edf5' : '#0c1222',
+                  content={({ active, payload, label }) => {
+                    if (active && payload && payload.length) {
+                      return (
+                        <div className="bg-card border border-cream-border py-2.5 px-4 rounded-xl shadow-[0_15px_35px_-12px_rgba(0,0,0,0.35)] backdrop-blur-xl">
+                          <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-ink-muted mb-1.5">{label}</p>
+                          <div className="flex items-center gap-2.5">
+                            <div 
+                              className="w-2.5 h-2.5 rounded-full shadow-sm" 
+                              style={{ backgroundColor: COLORS[label as keyof typeof COLORS] }} 
+                            />
+                            <p className="text-sm font-bold text-ink">
+                              {payload[0].value} <span className="text-[11px] text-ink-muted font-medium ml-1">students</span>
+                            </p>
+                          </div>
+                        </div>
+                      );
+                    }
+                    return null;
                   }}
                 />
                 <Bar dataKey="value" radius={[6, 6, 0, 0]} barSize={56}>
@@ -383,7 +385,7 @@ export default function DashboardPage({ students }: DashboardPageProps) {
             </Link>
           </div>
 
-          <div className="space-y-2">
+          <div className="space-y-2 max-h-[340px] overflow-y-auto pr-2 scrollbar-thin scroll-smooth">
             {stats.atRiskStudents.length > 0 ? (
               stats.atRiskStudents.map((student, i) => (
                 <div
@@ -407,7 +409,10 @@ export default function DashboardPage({ students }: DashboardPageProps) {
                     <p
                       className={cn(
                         'font-sans text-xl font-semibold tabular-nums leading-none',
-                        student.avgScore < 50 ? 'text-rose-600' : 'text-ochre',
+                        student.status === 'Excellent' ? 'text-emerald-600' :
+                        student.status === 'Good' ? 'text-ochre' :
+                        student.status === 'Risky' ? 'text-amber-600' : 
+                        'text-rose-600',
                       )}
                     >
                       {student.avgScore.toFixed(0)}%
