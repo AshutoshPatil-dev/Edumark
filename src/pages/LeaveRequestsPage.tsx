@@ -19,6 +19,7 @@ import { supabase } from '../lib/supabase';
 import { cn } from '../utils/attendance';
 import { motion, AnimatePresence } from 'motion/react';
 import type { Profile, LeaveRequest, LeaveStatus, LeaveType } from '../types';
+import { writeAdminLog } from '../utils/admin';
 
 interface LeaveRequestsPageProps {
   profile: Profile;
@@ -110,12 +111,12 @@ export default function LeaveRequestsPage({ profile, studentId }: LeaveRequestsP
 
     if (!error) {
       const request = requests.find(r => r.id === requestId);
-      await supabase.from('admin_logs').insert({
-        actor_id: profile.id,
-        category: 'leave',
-        action: `${action === 'approved' ? 'Approved' : 'Rejected'} leave request`,
-        details: `${request?.students?.name || 'Unknown'} (${request?.students?.roll_no || '—'}) · ${request?.start_date} to ${request?.end_date} · ${request?.leave_type}${reviewNote ? ` · Note: ${reviewNote}` : ''}`,
-      });
+      await writeAdminLog(
+        profile.id,
+        'leave',
+        `${action === 'approved' ? 'Approved' : 'Rejected'} leave request`,
+        `${request?.students?.name || 'Unknown'} (${request?.students?.roll_no || 'â€”'}) Â· ${request?.start_date} to ${request?.end_date} Â· ${request?.leave_type}${reviewNote ? ` Â· Note: ${reviewNote}` : ''}`
+      );
       setActiveReviewId(null);
       setReviewNote('');
       await fetchRequests();

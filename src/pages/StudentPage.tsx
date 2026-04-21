@@ -79,7 +79,7 @@ export default function StudentPage({
     [divisionStudents, selectedStudentId, isStudentView, students],
   );
 
-  const filteredStudents = useMemo(() => 
+  const filteredStudents = useMemo(() =>
     divisionStudents.filter(
       (s) =>
         s.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -158,7 +158,7 @@ export default function StudentPage({
                 </div>
                 <ChevronDown className={cn("w-4 h-4 text-ink/40 transition-transform duration-200", isDivDropdownOpen && "rotate-180")} />
               </button>
-              
+
               <AnimatePresence>
                 {isDivDropdownOpen && (
                   <motion.div

@@ -15,6 +15,7 @@ import { DIVISIONS, type DivisionId } from '../constants';
 import { cn } from '../utils/attendance';
 import type { AdminLog, AdminLogCategory } from '../types';
 import AdminTimetableEditor from '../components/AdminTimetableEditor';
+import { writeAdminLog } from '../utils/admin';
 
 function getDivisionFromRollNo(rollNo: string): DivisionId {
   if (rollNo && rollNo.length >= 5) {
@@ -30,19 +31,6 @@ function getDivisionFromRollNo(rollNo: string): DivisionId {
   return 'A';
 }
 
-async function writeAdminLog(
-  actorId: string,
-  category: AdminLogCategory,
-  action: string,
-  details?: string,
-) {
-  await supabase.from('admin_logs').insert({
-    actor_id: actorId,
-    category,
-    action,
-    details: details || null,
-  });
-}
 
 interface AdminPageProps {
   refreshData: () => Promise<void>;
@@ -73,19 +61,54 @@ export default function AdminPage({ refreshData }: AdminPageProps) {
   const fetchLogs = useCallback(async () => {
     setIsLoadingLogs(true);
 
-    let query = supabase
-      .from('admin_logs')
-      .select('*, profiles(full_name)')
-      .order('created_at', { ascending: false })
-      .limit(300);
+    try {
+      // Step 1: Fetch logs without join to avoid relationship errors
+      let query = supabase
+        .from('admin_logs')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(300);
 
-    if (logCategory !== 'all') {
-      query = query.eq('category', logCategory);
+      if (logCategory !== 'all') {
+        query = query.eq('category', logCategory);
+      }
+
+      const { data: logsData, error: logsError } = await query;
+      if (logsError) throw logsError;
+
+      if (!logsData || logsData.length === 0) {
+        setLogs([]);
+        setIsLoadingLogs(false);
+        return;
+      }
+
+      // Step 2: Fetch profiles for the unique actors
+      const actorIds = Array.from(new Set(logsData.map(l => l.actor_id).filter(Boolean)));
+      
+      const { data: profilesData, error: profilesError } = await supabase
+        .from('profiles')
+        .select('id, full_name')
+        .in('id', actorIds);
+
+      if (profilesError) {
+        console.error('Error fetching profiles for logs:', profilesError);
+        // Still show logs even if profile fetch fails
+        setLogs(logsData as AdminLog[]);
+      } else {
+        // Merge profiles into logs
+        const profileMap = new Map(profilesData?.map(p => [p.id, p.full_name]));
+        const mergedLogs = logsData.map(log => ({
+          ...log,
+          profiles: { full_name: profileMap.get(log.actor_id) || 'Unknown' }
+        }));
+        setLogs(mergedLogs as AdminLog[]);
+      }
+    } catch (err: any) {
+      console.error('Failed to fetch activity logs:', err);
+      setMessage({ type: 'error', text: 'Failed to load activity logs.' });
+    } finally {
+      setIsLoadingLogs(false);
     }
-
-    const { data } = await query;
-    setLogs((data as AdminLog[]) ?? []);
-    setIsLoadingLogs(false);
   }, [logCategory]);
 
   useEffect(() => {
@@ -125,6 +148,7 @@ export default function AdminPage({ refreshData }: AdminPageProps) {
       setRollNo('');
       setBatch('');
       await refreshData();
+      if (mainTab === 'logs') fetchLogs(); // Refresh logs if on that tab
     } catch (err: any) {
       setMessage({ type: 'error', text: err.message || 'Failed to add student.' });
     } finally {
@@ -168,6 +192,7 @@ export default function AdminPage({ refreshData }: AdminPageProps) {
       setMessage({ type: 'success', text: `Successfully added ${studentsToInsert.length} students.` });
       setBulkText('');
       await refreshData();
+      if (mainTab === 'logs') fetchLogs();
     } catch (err: any) {
       setMessage({ type: 'error', text: err.message || 'Failed to add students.' });
     } finally {
@@ -226,6 +251,7 @@ export default function AdminPage({ refreshData }: AdminPageProps) {
 
       setMessage({ type: 'success', text: `Successfully added ${timetableToInsert.length} timetable entries.` });
       setTimetableCSV('');
+      if (mainTab === 'logs') fetchLogs();
     } catch (err: any) {
       setMessage({ type: 'error', text: err.message || 'Failed to add timetable.' });
     } finally {

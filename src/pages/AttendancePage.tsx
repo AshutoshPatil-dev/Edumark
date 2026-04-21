@@ -44,10 +44,10 @@ export default function AttendancePage({
     profile.role === 'admin'
       ? SUBJECTS
       : SUBJECTS.filter(
-          (sub) =>
-            profile.assigned_subjects.includes(sub) ||
-            (sub === 'DEIC-T' && profile.assigned_subjects.includes('DEIC')),
-        );
+        (sub) =>
+          profile.assigned_subjects.includes(sub) ||
+          (sub === 'DEIC-T' && profile.assigned_subjects.includes('DEIC')),
+      );
 
   const [selectedSubject, setSelectedSubject] = useState<SubjectId>(
     availableSubjects[0] || SUBJECTS[0],
@@ -172,7 +172,7 @@ export default function AttendancePage({
 
   const isPractical = selectedSubject.endsWith('L') || selectedSubject === 'PBL';
 
-  const filteredStudents = useMemo(() => 
+  const filteredStudents = useMemo(() =>
     students.filter(
       (s) =>
         s.division === selectedDivision &&
@@ -207,7 +207,7 @@ export default function AttendancePage({
         const fullNum = parseInt(match[0], 10);
         const lastTwoMatch = s.rollNo.match(/\d{1,2}$/);
         const shortNum = lastTwoMatch ? parseInt(lastTwoMatch[0], 10) : -1;
-        
+
         return num === fullNum || num === shortNum;
       });
 
@@ -794,7 +794,7 @@ export default function AttendancePage({
                   className={cn(
                     'group relative p-4 rounded-2xl border text-left overflow-hidden',
                     (availableSubjects.length === 0 || validDivisions.length === 0) &&
-                      'opacity-50 cursor-not-allowed',
+                    'opacity-50 cursor-not-allowed',
                     justSaved
                       ? 'bg-night text-white border-night scale-[0.98]'
                       : isAbsent

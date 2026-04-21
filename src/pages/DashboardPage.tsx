@@ -82,9 +82,9 @@ export default function DashboardPage({ students }: DashboardPageProps) {
         return null;
       })
       .filter((s) => s !== null) as (Student & {
-      avgScore: number;
-      status: string;
-    })[];
+        avgScore: number;
+        status: string;
+      })[];
 
     return {
       avgAttendance: studentCount > 0 ? totalScore / studentCount : 0,
@@ -100,42 +100,34 @@ export default function DashboardPage({ students }: DashboardPageProps) {
   }, [students, selectedDivision]);
 
   const COLORS = useMemo(
-    () =>
-      theme === 'dark'
-        ? {
-            Excellent: '#e2e8f0',
-            Good: '#22d3ee',
-            Risky: '#fbbf24',
-            Critical: '#fb7185',
-          }
-        : {
-            Excellent: '#0c1222',
-            Good: '#06b6d4',
-            Risky: '#d97706',
-            Critical: '#be123c',
-          },
-    [theme],
+    () => ({
+      Excellent: '#10b981',
+      Good: '#3b82f6',
+      Risky: '#f97316',
+      Critical: '#ef4444',
+    }),
+    [],
   );
 
   const chartChrome = useMemo(
     () =>
       theme === 'dark'
         ? {
-            grid: '#2a3648',
-            tick: '#94a3b8',
-            cursor: 'rgba(34, 211, 238, 0.08)',
-            tooltipBg: '#141c27',
-            tooltipBorder: '#2a3648',
-            tooltipShadow: '0 10px 30px -12px rgba(0,0,0,0.45)',
-          }
+          grid: '#2a3648',
+          tick: '#94a3b8',
+          cursor: 'rgba(34, 211, 238, 0.08)',
+          tooltipBg: '#141c27',
+          tooltipBorder: '#2a3648',
+          tooltipShadow: '0 10px 30px -12px rgba(0,0,0,0.45)',
+        }
         : {
-            grid: '#cbd5e1',
-            tick: '#64748b',
-            cursor: '#eff6ff',
-            tooltipBg: '#f8fafc',
-            tooltipBorder: '#cbd5e1',
-            tooltipShadow: '0 10px 30px -12px rgba(11,15,25,0.15)',
-          },
+          grid: '#cbd5e1',
+          tick: '#64748b',
+          cursor: '#eff6ff',
+          tooltipBg: '#f8fafc',
+          tooltipBorder: '#cbd5e1',
+          tooltipShadow: '0 10px 30px -12px rgba(11,15,25,0.15)',
+        },
     [theme],
   );
 
@@ -200,7 +192,7 @@ export default function DashboardPage({ students }: DashboardPageProps) {
               </div>
               <ChevronDown className={cn("w-4 h-4 text-ink/40 transition-transform duration-200", isDropdownOpen && "rotate-180")} />
             </button>
-            
+
             <AnimatePresence>
               {isDropdownOpen && (
                 <motion.div
