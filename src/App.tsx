@@ -281,6 +281,17 @@ export default function App() {
   if (!isLoggedIn) {
     return <LoginPage onLogin={() => {
       localStorage.setItem('edumark_last_activity', Date.now().toString());
+      const userData = localStorage.getItem('edumark_user');
+      if (userData) {
+        const user = JSON.parse(userData);
+        setProfile({
+          id: user.id,
+          role: user.role,
+          full_name: user.fullName,
+          assigned_subjects: [],
+          roll_no: user.rollNo
+        });
+      }
       setIsLoggedIn(true);
     }} />;
   }
