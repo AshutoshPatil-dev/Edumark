@@ -16,9 +16,10 @@ interface LoginPageProps {
 }
 
 export default function LoginPage({ onLogin }: LoginPageProps) {
-  const { theme } = useTheme();
+  const [isSignup, setIsSignup] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [fullName, setFullName] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -28,24 +29,28 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
     setIsLoading(true);
 
     try {
-      const response = await fetch('/api/auth/login', {
+      const endpoint = isSignup ? '/api/auth/signup' : '/api/auth/login';
+      const body = isSignup 
+        ? { email, password, fullName, role: 'admin' } 
+        : { email, password };
+
+      const response = await fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify(body),
       });
 
       const data = await response.json() as any;
 
       if (response.ok && data.token) {
-        // Save session info
         localStorage.setItem('edumark_token', data.token);
         localStorage.setItem('edumark_user', JSON.stringify(data.user));
         onLogin();
       } else {
-        setError(data.error || 'Invalid email or password');
+        setError(data.error || 'Authentication failed');
       }
     } catch (err) {
-      setError('Connection to auth server failed');
+      setError('Connection to server failed');
     } finally {
       setIsLoading(false);
     }
@@ -160,6 +165,25 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
               </div>
             </div>
 
+            {isSignup && (
+              <div className="space-y-1.5">
+                <label className="eyebrow block" htmlFor="fullName">
+                  Full Name
+                </label>
+                <div className="relative group">
+                  <input
+                    id="fullName"
+                    type="text"
+                    required
+                    value={fullName}
+                    onChange={(e) => setFullName(e.target.value)}
+                    className="w-full px-4 py-3.5 bg-input border border-cream-border rounded-xl focus:outline-none focus:ring-4 focus:ring-ochre/10 focus:border-ochre/60 font-medium text-ink placeholder:text-ink/30"
+                    placeholder="Your Name"
+                  />
+                </div>
+              </div>
+            )}
+
             <div className="space-y-1.5">
               <label className="eyebrow block" htmlFor="password">
                 Password
@@ -187,7 +211,7 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
                 <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
               ) : (
                 <>
-                  <span>Sign in to EduMark</span>
+                  <span>{isSignup ? "Create your account" : "Sign in to EduMark"}</span>
                   <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-0.5" />
                 </>
               )}
@@ -196,9 +220,16 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
             <div className="pt-2">
               <div className="rule-paper my-6" />
               <p className="text-[0.75rem] text-ink-muted text-center leading-relaxed">
-                Authorised personnel only. All sessions are logged.
+                {isSignup ? "Already have an account?" : "Don't have an account?"}{' '}
+                <button
+                  type="button"
+                  onClick={() => setIsSignup(!isSignup)}
+                  className="text-ochre font-semibold hover:underline"
+                >
+                  {isSignup ? "Sign in" : "Sign up"}
+                </button>
                 <br />
-                Contact your administrator for access.
+                Authorised personnel only. All sessions are logged.
               </p>
             </div>
           </form>
