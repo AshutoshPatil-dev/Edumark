@@ -1,0 +1,8 @@
+name = "edumark"
+compatibility_date = "2024-04-03"
+pages_build_output_dir = "dist"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "edumark-db"
+database_id = "YOUR_DATABASE_ID" # Fill this after running 'npx wrangler d1 create edumark-db'
