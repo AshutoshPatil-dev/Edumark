@@ -85,34 +85,33 @@ export default function App() {
   };
 
   useEffect(() => {
-    // Check active session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setIsLoggedIn(!!session);
-      if (session?.user) {
-        fetchProfile(session.user.id);
-      }
-      setIsAuthChecking(false);
-    });
+    // Check local session
+    const token = localStorage.getItem('edumark_token');
+    const userData = localStorage.getItem('edumark_user');
 
-    // Listen for auth changes
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((event, session) => {
-      if (event === 'SIGNED_OUT') {
-        localStorage.removeItem('edumark_last_activity');
+    if (token && userData) {
+      const user = JSON.parse(userData);
+      setIsLoggedIn(true);
+      setProfile({
+        id: user.id,
+        role: user.role,
+        full_name: user.fullName,
+        assigned_subjects: [], // Will be fetched if needed
+        roll_no: user.rollNo
+      });
+    }
+    
+    setIsAuthChecking(false);
+
+    // Listen for storage changes (optional, handles logout across tabs)
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'edumark_token' && !e.newValue) {
         setIsLoggedIn(false);
         setProfile(null);
-        setProfileError(null);
-      } else if (event === 'SIGNED_IN') {
-        localStorage.setItem('edumark_last_activity', Date.now().toString());
-        setIsLoggedIn(true);
-        if (session?.user) {
-          fetchProfile(session.user.id);
-        }
       }
-    });
-
-    return () => subscription.unsubscribe();
+    };
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
   }, []);
 
   const fetchStudents = async () => {
@@ -190,7 +189,8 @@ export default function App() {
   }, [isLoggedIn, profile]);
 
   const handleLogout = async () => {
-    await supabase.auth.signOut();
+    localStorage.removeItem('edumark_token');
+    localStorage.removeItem('edumark_user');
     localStorage.removeItem('edumark_last_activity');
     setIsLoggedIn(false);
     setProfile(null);

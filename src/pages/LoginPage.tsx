@@ -28,18 +28,24 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
     setIsLoading(true);
 
     try {
-      const { data, error: fetchError } = await supabase.auth.signInWithPassword({
-        email,
-        password,
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
       });
 
-      if (data.user && !fetchError) {
+      const data = await response.json() as any;
+
+      if (response.ok && data.token) {
+        // Save session info
+        localStorage.setItem('edumark_token', data.token);
+        localStorage.setItem('edumark_user', JSON.stringify(data.user));
         onLogin();
       } else {
-        setError(fetchError?.message || 'Invalid email or password');
+        setError(data.error || 'Invalid email or password');
       }
     } catch (err) {
-      setError('Database connection error');
+      setError('Connection to auth server failed');
     } finally {
       setIsLoading(false);
     }
