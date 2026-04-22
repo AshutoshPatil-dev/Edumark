@@ -19,7 +19,6 @@ import StudentPage from './pages/StudentPage';
 import Navbar from './components/Navbar';
 import MissingAttendanceAlert from './components/MissingAttendanceAlert';
 import { SyncProvider } from './context/SyncContext';
-import { supabase } from './lib/supabase';
 
 // Lazy load heavy pages
 const ReportPage = lazy(() => import('./pages/ReportPage'));
@@ -33,56 +32,7 @@ export default function App() {
   const [isAuthChecking, setIsAuthChecking] = useState(true);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [profile, setProfile] = useState<Profile | null>(null);
-  const [profileError, setProfileError] = useState<string | null>(null);
-
-  const fetchProfile = async (userId: string) => {
-    setProfileError(null);
-    
-    console.log('Checking profile for userId:', userId);
-    
-    // First try to fetch a faculty profile
-    const { data: profileData, error: profileError } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('id', userId)
-      .single();
-    
-    if (profileError) console.warn('Profile fetch error:', profileError);
-
-    if (profileData && !profileError) {
-      setProfile({
-        id: profileData.id,
-        role: profileData.role,
-        full_name: profileData.full_name,
-        assigned_subjects: profileData.assigned_subjects || [],
-        roll_no: profileData.roll_no
-      });
-      return;
-    }
-
-    // If no profile, check if they are a student linked via user_id
-    const { data: studentData, error: studentError } = await supabase
-      .from('students')
-      .select('*')
-      .eq('user_id', userId)
-      .single();
-
-    if (studentError) console.warn('Student fetch error:', studentError);
-
-    if (studentData && !studentError) {
-      setProfile({
-        id: userId,
-        role: 'student',
-        full_name: studentData.name,
-        assigned_subjects: [],
-        roll_no: studentData.roll_no
-      });
-      return;
-    }
-
-    console.error('Error fetching profile:', profileError, studentError);
-    setProfileError("We couldn't find an account linked to your login. Please contact your administrator to set up your profile.");
-  };
+  const [profileError] = useState<string | null>(null);
 
   useEffect(() => {
     // Check local session
