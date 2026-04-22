@@ -1,5 +1,2 @@
-# API routes are handled by Cloudflare Functions
-/api/* /api/* 200
-
-# Fallback for SPA routing
-/* /index.html 200
+/api/*  /api/:splat  200
+/*      /index.html  200
