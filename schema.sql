@@ -1,13 +1,18 @@
--- Profiles table
-CREATE TABLE IF NOT EXISTS profiles (
+CREATE TABLE IF NOT EXISTS users (
   id TEXT PRIMARY KEY,
+  email TEXT NOT NULL UNIQUE,
+  password_hash TEXT NOT NULL,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS profiles (
+  id TEXT PRIMARY KEY REFERENCES users(id),
   role TEXT NOT NULL CHECK (role IN ('faculty', 'admin', 'student')),
   full_name TEXT NOT NULL,
   roll_no TEXT,
-  assigned_subjects TEXT -- JSON string for array
+  assigned_subjects TEXT
 );
 
--- Students table
 CREATE TABLE IF NOT EXISTS students (
   id TEXT PRIMARY KEY,
   name TEXT NOT NULL,
@@ -17,7 +22,6 @@ CREATE TABLE IF NOT EXISTS students (
   user_id TEXT REFERENCES profiles(id)
 );
 
--- Attendance table
 CREATE TABLE IF NOT EXISTS attendance (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   student_id TEXT NOT NULL REFERENCES students(id),
@@ -29,7 +33,6 @@ CREATE TABLE IF NOT EXISTS attendance (
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
--- Admin Logs table
 CREATE TABLE IF NOT EXISTS admin_logs (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   actor_id TEXT REFERENCES profiles(id),
@@ -39,7 +42,6 @@ CREATE TABLE IF NOT EXISTS admin_logs (
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
--- Leave Requests table (inferred from previous summaries)
 CREATE TABLE IF NOT EXISTS leave_requests (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   student_id TEXT REFERENCES students(id),
