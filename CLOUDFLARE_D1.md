@@ -16,7 +16,7 @@ Copy the `database_id` from the output of the previous command and paste it into
 [[d1_databases]]
 binding = "DB"
 database_name = "edumark-db"
-database_id = "PASTE_YOUR_ID_HERE"
+database_id = "77017dda-125a-48e6-86f1-b155f6eb1157"
 ```
 
 ### 3. Initialize the Schema

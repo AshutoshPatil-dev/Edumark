@@ -5,4 +5,4 @@ pages_build_output_dir = "dist"
 [[d1_databases]]
 binding = "DB"
 database_name = "edumark-db"
-database_id = "YOUR_DATABASE_ID" # Fill this after running 'npx wrangler d1 create edumark-db'
+database_id = "77017dda-125a-48e6-86f1-b155f6eb1157" # Fill this after running 'npx wrangler d1 create edumark-db'
