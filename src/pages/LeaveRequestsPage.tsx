@@ -73,22 +73,13 @@ export default function LeaveRequestsPage({ profile, studentId }: LeaveRequestsP
 
   const fetchRequests = useCallback(async () => {
     setIsLoading(true);
-
-    let query = supabase
-      .from('leave_requests')
-      .select('*, students(name, roll_no, division)')
-      .order('created_at', { ascending: false });
-
-    if (isStudentView && studentId) {
-      query = query.eq('student_id', studentId);
+    try {
+      const response = await fetch(`/api/leave?${isStudentView && studentId ? `studentId=${studentId}` : ''}${statusFilter !== 'all' ? `&status=${statusFilter}` : ''}`);
+      const data = await response.json() as LeaveRequest[];
+      setRequests(data ?? []);
+    } catch (err) {
+      setRequests([]);
     }
-
-    if (statusFilter !== 'all') {
-      query = query.eq('status', statusFilter);
-    }
-
-    const { data } = await query;
-    setRequests((data as LeaveRequest[]) ?? []);
     setIsLoading(false);
   }, [statusFilter, isStudentView, studentId]);
 
@@ -130,13 +121,17 @@ export default function LeaveRequestsPage({ profile, studentId }: LeaveRequestsP
     setFormSubmitting(true);
     setFormMessage(null);
 
-    const { error } = await supabase.from('leave_requests').insert({
-      student_id: studentId,
-      start_date: formStartDate,
-      end_date: formEndDate,
-      reason: formReason,
-      leave_type: formType,
-      status: 'pending',
+    const response = await fetch('/api/leave', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        student_id: studentId,
+        start_date: formStartDate,
+        end_date: formEndDate,
+        reason: formReason,
+        leave_type: formType,
+        status: 'pending',
+      }),
     });
 
     if (error) {

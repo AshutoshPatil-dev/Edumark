@@ -27,13 +27,20 @@ export default function AdminTimetableEditor() {
 
   const fetchData = async () => {
     setIsLoading(true);
-    const [profilesRes, timetableRes] = await Promise.all([
-      supabase.from('profiles').select('id, full_name').in('role', ['faculty', 'admin']),
-      supabase.from('timetable').select('*').eq('division', selectedDivision)
-    ]);
-    
-    if (profilesRes.data) setProfiles(profilesRes.data);
-    if (timetableRes.data) setTimetable(timetableRes.data);
+    try {
+      const [profilesRes, timetableRes] = await Promise.all([
+        fetch('/api/profiles'),
+        fetch(`/api/timetable?division=${selectedDivision}`)
+      ]);
+      
+      const profilesData = await profilesRes.json();
+      const timetableData = await timetableRes.json();
+
+      setProfiles(profilesData.filter((p: any) => p.role === 'faculty' || p.role === 'admin'));
+      setTimetable(timetableData);
+    } catch (err) {
+      console.error('Failed to fetch timetable data:', err);
+    }
     setIsLoading(false);
   };
 
@@ -65,16 +72,25 @@ export default function AdminTimetableEditor() {
     };
 
     if (editingSlot.id) {
-      await supabase.from('timetable').update(payload).eq('id', editingSlot.id);
+      await fetch(`/api/timetable?id=${editingSlot.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
     } else {
-      await supabase.from('timetable').insert([payload]);
+      await fetch('/api/timetable', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
     }
     
     setIsModalOpen(false);
     fetchData();
 
     // Log the change
-    const { data: { user } } = await supabase.auth.getUser();
+    const userData = localStorage.getItem('edumark_user');
+    const user = userData ? JSON.parse(userData) : null;
     if (user) {
       await writeAdminLog(
         user.id,
@@ -87,12 +103,13 @@ export default function AdminTimetableEditor() {
 
   const handleDeleteSlot = async () => {
     if (editingSlot?.id) {
-      await supabase.from('timetable').delete().eq('id', editingSlot.id);
+      await fetch(`/api/timetable?id=${editingSlot.id}`, { method: 'DELETE' });
       setIsModalOpen(false);
       fetchData();
 
       // Log the deletion
-      const { data: { user } } = await supabase.auth.getUser();
+      const userData = localStorage.getItem('edumark_user');
+      const user = userData ? JSON.parse(userData) : null;
       if (user) {
         await writeAdminLog(
           user.id,

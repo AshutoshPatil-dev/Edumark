@@ -119,62 +119,11 @@ export default function App() {
     setIsLoading(true);
     
     try {
-      // Fetch students and attendance from Supabase
-      let studentsQuery = supabase.from('students').select('*');
-      let attendanceQuery = supabase.from('attendance').select('*');
-
-      // If student, only fetch their own data
-      if (profile.role === 'student' && profile.roll_no) {
-        studentsQuery = studentsQuery.eq('roll_no', profile.roll_no);
-        // We'll need to fetch the student ID first to filter attendance, 
-        // or we can just fetch attendance after getting the student.
-      }
-
-      const { data: studentsData, error: studentsError } = await studentsQuery;
+      const response = await fetch('/api/students');
+      if (!response.ok) throw new Error('Failed to fetch students');
       
-      if (studentsError) throw studentsError;
-
-      if (studentsData && studentsData.length > 0) {
-        if (profile.role === 'student') {
-          // Filter attendance by this student's ID
-          attendanceQuery = attendanceQuery.eq('student_id', studentsData[0].id);
-        }
-
-        const { data: attendanceData, error: attendanceError } = await attendanceQuery;
-        if (attendanceError) throw attendanceError;
-
-        const formattedStudents: Student[] = studentsData.map(s => ({
-          id: s.id,
-          name: s.name,
-          rollNo: s.roll_no,
-          division: s.division || 'A', // Fallback to 'A' if null
-          batch: s.batch,
-          attendance: {}
-        })).sort((a, b) => a.rollNo.localeCompare(b.rollNo, undefined, { numeric: true, sensitivity: 'base' }));
-
-        if (attendanceData) {
-          const studentMap = new Map<string, Student>();
-          formattedStudents.forEach(s => studentMap.set(s.id, s));
-
-          attendanceData.forEach(record => {
-            const student = studentMap.get(record.student_id);
-            if (student) {
-              if (!student.attendance[record.subject]) {
-                student.attendance[record.subject] = [];
-              }
-              student.attendance[record.subject].push({
-                date: record.date,
-                lectureNo: record.lecture_no,
-                status: record.status as 0 | 1,
-                marked_by: record.marked_by
-              });
-            }
-          });
-        }
-        setStudents(formattedStudents);
-      } else {
-        setStudents([]);
-      }
+      const data = await response.json();
+      setStudents(data);
     } catch (error) {
       console.error('Error fetching data:', error);
     } finally {

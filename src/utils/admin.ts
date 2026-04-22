@@ -1,4 +1,3 @@
-import { supabase } from '../lib/supabase';
 import type { AdminLogCategory } from '../types';
 
 export async function writeAdminLog(
@@ -7,10 +6,18 @@ export async function writeAdminLog(
   action: string,
   details?: string,
 ) {
-  await supabase.from('admin_logs').insert({
-    actor_id: actorId,
-    category,
-    action,
-    details: details || null,
-  });
+  try {
+    await fetch('/api/logs', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        actor_id: actorId,
+        category,
+        action,
+        details: details || null,
+      }),
+    });
+  } catch (err) {
+    console.error('Failed to write admin log:', err);
+  }
 }

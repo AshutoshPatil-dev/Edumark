@@ -22,6 +22,16 @@ CREATE TABLE IF NOT EXISTS students (
   user_id TEXT REFERENCES profiles(id)
 );
 
+CREATE TABLE IF NOT EXISTS timetable (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  day_of_week INTEGER NOT NULL,
+  subject_id TEXT NOT NULL,
+  division TEXT NOT NULL,
+  batch TEXT,
+  lecture_no INTEGER NOT NULL,
+  faculty_id TEXT REFERENCES profiles(id)
+);
+
 CREATE TABLE IF NOT EXISTS attendance (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   student_id TEXT NOT NULL REFERENCES students(id),
@@ -30,7 +40,8 @@ CREATE TABLE IF NOT EXISTS attendance (
   status INTEGER NOT NULL CHECK (status IN (0, 1)),
   marked_by TEXT REFERENCES profiles(id),
   subject TEXT NOT NULL,
-  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE(student_id, date, lecture_no, subject)
 );
 
 CREATE TABLE IF NOT EXISTS admin_logs (

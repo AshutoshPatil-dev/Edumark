@@ -274,25 +274,20 @@ export default function AttendancePage({
       const d = new Date(date);
       const dayOfWeek = d.getDay();
 
-      let query = supabase
-        .from('timetable')
-        .select('division')
-        .eq('day_of_week', dayOfWeek)
-        .eq('subject_id', selectedSubject);
+      try {
+        const response = await fetch(`/api/timetable?dayOfWeek=${dayOfWeek}&subjectId=${selectedSubject}${profile.role !== 'admin' ? `&facultyId=${profile.id}` : ''}`);
+        const data = await response.json() as any[];
 
-      if (profile.role !== 'admin') {
-        query = query.eq('faculty_id', profile.id);
-      }
-
-      const { data, error } = await query;
-
-      if (!error && data && data.length > 0) {
-        const uniqueDivs = Array.from(new Set(data.map((d) => d.division as DivisionId))).sort();
-        setValidDivisions(uniqueDivs);
-        if (!uniqueDivs.includes(selectedDivision)) {
-          setSelectedDivision(uniqueDivs[0]);
+        if (data && data.length > 0) {
+          const uniqueDivs = Array.from(new Set(data.map((d) => d.division as DivisionId))).sort();
+          setValidDivisions(uniqueDivs);
+          if (!uniqueDivs.includes(selectedDivision)) {
+            setSelectedDivision(uniqueDivs[0]);
+          }
+        } else {
+          setValidDivisions([]);
         }
-      } else {
+      } catch (err) {
         setValidDivisions([]);
       }
     };
@@ -311,29 +306,22 @@ export default function AttendancePage({
       const d = new Date(date);
       const dayOfWeek = d.getDay();
 
-      let query = supabase
-        .from('timetable')
-        .select('batch')
-        .eq('day_of_week', dayOfWeek)
-        .eq('subject_id', selectedSubject)
-        .eq('division', selectedDivision)
-        .not('batch', 'is', null);
+      try {
+        const response = await fetch(`/api/timetable?dayOfWeek=${dayOfWeek}&subjectId=${selectedSubject}&division=${selectedDivision}${profile.role !== 'admin' ? `&facultyId=${profile.id}` : ''}`);
+        const data = await response.json() as any[];
 
-      if (profile.role !== 'admin') {
-        query = query.eq('faculty_id', profile.id);
-      }
-
-      const { data, error } = await query;
-
-      if (!error && data && data.length > 0) {
-        const uniqueBatches = Array.from(new Set(data.map((d) => d.batch as string))).sort();
-        setValidBatches(uniqueBatches);
-        if (!uniqueBatches.includes(selectedBatch)) {
-          setSelectedBatch(uniqueBatches[0]);
+        if (data && data.length > 0) {
+          const uniqueBatches = Array.from(new Set(data.filter(d => d.batch).map((d) => d.batch as string))).sort();
+          setValidBatches(uniqueBatches);
+          if (!uniqueBatches.includes(selectedBatch)) {
+            setSelectedBatch(uniqueBatches[0] || '');
+          }
+        } else {
+          setValidBatches([]);
+          setSelectedBatch('');
         }
-      } else {
+      } catch (err) {
         setValidBatches([]);
-        setSelectedBatch('');
       }
     };
 
@@ -345,45 +333,40 @@ export default function AttendancePage({
       const d = new Date(date);
       const dayOfWeek = d.getDay();
 
-      let query = supabase
-        .from('timetable')
-        .select('lecture_no')
-        .eq('day_of_week', dayOfWeek)
-        .eq('subject_id', selectedSubject)
-        .eq('division', selectedDivision);
+      try {
+        const response = await fetch(`/api/timetable?dayOfWeek=${dayOfWeek}&subjectId=${selectedSubject}&division=${selectedDivision}${profile.role !== 'admin' ? `&facultyId=${profile.id}` : ''}`);
+        const data = await response.json() as any[];
 
-      if (profile.role !== 'admin') {
-        query = query.eq('faculty_id', profile.id);
-      }
-
-      if (isPractical && selectedBatch) {
-        query = query.eq('batch', selectedBatch);
-      } else if (!isPractical) {
-        query = query.is('batch', null);
-      }
-
-      const { data, error } = await query;
-
-      if (!error && data && data.length > 0) {
-        let uniqueLectures = Array.from(new Set(data.map((d) => d.lecture_no))).sort(
-          (a, b) => a - b,
-        );
-
-        if (isPractical && uniqueLectures.length > 0) {
-          const blocks: number[] = [];
-          for (let i = 0; i < uniqueLectures.length; i++) {
-            if (i === 0 || uniqueLectures[i] !== uniqueLectures[i - 1] + 1) {
-              blocks.push(uniqueLectures[i]);
-            }
+        if (data && data.length > 0) {
+          let filtered = data;
+          if (isPractical && selectedBatch) {
+            filtered = data.filter(d => d.batch === selectedBatch);
+          } else if (!isPractical) {
+            filtered = data.filter(d => !d.batch);
           }
-          uniqueLectures = blocks;
-        }
 
-        setValidLectures(uniqueLectures);
-        if (!uniqueLectures.includes(lectureNo)) {
-          setLectureNo(uniqueLectures[0]);
+          let uniqueLectures = Array.from(new Set(filtered.map((d) => d.lecture_no))).sort(
+            (a, b) => a - b,
+          );
+
+          if (isPractical && uniqueLectures.length > 0) {
+            const blocks: number[] = [];
+            for (let i = 0; i < uniqueLectures.length; i++) {
+              if (i === 0 || uniqueLectures[i] !== uniqueLectures[i - 1] + 1) {
+                blocks.push(uniqueLectures[i]);
+              }
+            }
+            uniqueLectures = blocks;
+          }
+
+          setValidLectures(uniqueLectures);
+          if (!uniqueLectures.includes(lectureNo)) {
+            setLectureNo(uniqueLectures[0]);
+          }
+        } else {
+          setValidLectures([]);
         }
-      } else {
+      } catch (err) {
         setValidLectures([]);
       }
     };
@@ -394,27 +377,25 @@ export default function AttendancePage({
   useEffect(() => {
     const fetchExistingAttendance = async () => {
       setIsLoadingAttendance(true);
-      const { data, error } = await supabase
-        .from('attendance')
-        .select('student_id, status, remark')
-        .eq('date', date)
-        .eq('subject', selectedSubject)
-        .eq('lecture_no', lectureNo);
+      try {
+        const response = await fetch(`/api/attendance?date=${date}&subject=${selectedSubject}&lectureNo=${lectureNo}`);
+        const data = await response.json() as any[];
 
-      if (!error && data) {
-        const absentees = new Set<string>();
-        const loadedRemarks: Record<string, string> = {};
-        data.forEach((record) => {
-          if (record.status === 0) {
-            absentees.add(record.student_id);
-            if (record.remark) loadedRemarks[record.student_id] = record.remark;
-          }
-        });
-        setAbsenteeIds(absentees);
-        setInitialAbsenteeIds(new Set(absentees));
-        setRemarks(loadedRemarks);
-        setInitialRemarks({ ...loadedRemarks });
-      } else {
+        if (data) {
+          const absentees = new Set<string>();
+          const loadedRemarks: Record<string, string> = {};
+          data.forEach((record) => {
+            if (record.status === 0) {
+              absentees.add(record.student_id);
+              if (record.remark) loadedRemarks[record.student_id] = record.remark;
+            }
+          });
+          setAbsenteeIds(absentees);
+          setInitialAbsenteeIds(new Set(absentees));
+          setRemarks(loadedRemarks);
+          setInitialRemarks({ ...loadedRemarks });
+        }
+      } catch (err) {
         setAbsenteeIds(new Set());
         setInitialAbsenteeIds(new Set());
         setRemarks({});
@@ -480,20 +461,15 @@ export default function AttendancePage({
       return;
     }
 
-    const { error } = await supabase
-      .from('attendance')
-      .upsert(recordsToUpsert, { onConflict: 'student_id,subject,date,lecture_no' });
+    const response = await fetch('/api/attendance', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(recordsToUpsert),
+    });
 
-    if (!error) {
+    if (response.ok) {
       setInitialAbsenteeIds(new Set(absenteeIds));
       setInitialRemarks({ ...remarks });
-      // Write to unified admin log
-      await supabase.from('admin_logs').insert({
-        actor_id: profile.id,
-        category: 'attendance',
-        action: 'Marked attendance',
-        details: `${selectedSubject} · Div ${selectedDivision}${selectedBatch ? ` Batch ${selectedBatch}` : ''} · Lecture ${lectureNo} · ${date} · ${absenteeIds.size} absent`,
-      });
       await refreshData();
       setShowSuccess(true);
       setJustSaved(true);
@@ -501,7 +477,6 @@ export default function AttendancePage({
       setTimeout(() => setJustSaved(false), 300);
       setTimeout(() => setShowSuccess(false), 3000);
     } else {
-      console.error('Error saving attendance:', error);
       alert('Failed to save attendance. Please check your connection.');
     }
 
