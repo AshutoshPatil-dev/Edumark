@@ -79,7 +79,7 @@ export default function StudentPage({
     [divisionStudents, selectedStudentId, isStudentView, students],
   );
 
-  const filteredStudents = useMemo(() => 
+  const filteredStudents = useMemo(() =>
     divisionStudents.filter(
       (s) =>
         s.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -124,10 +124,10 @@ export default function StudentPage({
 
   const getTwasTone = (score?: number) => {
     if (score === undefined) return 'text-ink';
-    if (score >= 85) return 'text-ink';
+    if (score >= 85) return 'text-emerald-600';
     if (score >= 70) return 'text-ochre-deep';
-    if (score >= 50) return 'text-amber-700';
-    return 'text-rose-700';
+    if (score >= 50) return 'text-amber-600';
+    return 'text-rose-600';
   };
 
   return (
@@ -158,7 +158,7 @@ export default function StudentPage({
                 </div>
                 <ChevronDown className={cn("w-4 h-4 text-ink/40 transition-transform duration-200", isDivDropdownOpen && "rotate-180")} />
               </button>
-              
+
               <AnimatePresence>
                 {isDivDropdownOpen && (
                   <motion.div
@@ -405,13 +405,24 @@ export default function StudentPage({
                             <XAxis dataKey="name" hide />
                             <YAxis domain={[0, 100]} hide />
                             <Tooltip
-                              contentStyle={{
-                                borderRadius: '12px',
-                                border: '1px solid var(--color-cream-border)',
-                                background: 'var(--color-paper)',
-                                fontFamily: 'Inter, sans-serif',
-                                fontSize: 12,
-                                color: 'var(--color-ink)'
+                              content={({ active, payload, label }) => {
+                                if (active && payload && payload.length) {
+                                  const data = payload[0].payload;
+                                  return (
+                                    <div className="bg-card border border-cream-border py-2.5 px-4 rounded-xl shadow-[0_15px_35px_-12px_rgba(0,0,0,0.35)] backdrop-blur-xl">
+                                      <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-ink-muted mb-1.5">
+                                        {new Date(data.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                                      </p>
+                                      <div className="flex items-center gap-2.5">
+                                        <div className="w-2.5 h-2.5 rounded-full bg-ochre shadow-sm" />
+                                        <p className="text-sm font-bold text-ink">
+                                          {payload[0].value}% <span className="text-[11px] text-ink-muted font-medium ml-1">Score</span>
+                                        </p>
+                                      </div>
+                                    </div>
+                                  );
+                                }
+                                return null;
                               }}
                             />
                             <Line

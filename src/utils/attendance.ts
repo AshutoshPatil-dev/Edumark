@@ -43,6 +43,13 @@ export function calculateTWAS(records: AttendanceRecord[]): TWASResult {
   return { score, status };
 }
 
+export function getCorrectBatchesForDivision(division: string): string[] {
+  const index = division.charCodeAt(0) - 65; // A=0, B=1, ...
+  if (index < 0 || index > 25) return [];
+  const start = index * 3 + 1;
+  return [`F${start}`, `F${start + 1}`, `F${start + 2}`];
+}
+
 export function getStatusColor(status: BehaviourStatus): string {
   switch (status) {
     case 'Excellent':

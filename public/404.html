@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>404 - Page Not Found | EduMark</title>
+    <link rel="stylesheet" href="/index.css">
+    <style>
+        :root {
+            --color-ochre: #d97706;
+            --color-ochre-deep: #b45309;
+            --color-ink: #0c1222;
+            --color-ink-muted: #475569;
+            --color-paper: #ffffff;
+            --color-cream-border: #f1f5f9;
+        }
+
+        .dark {
+            --color-ink: #f8fafc;
+            --color-ink-muted: #94a3b8;
+            --color-paper: #09090b;
+            --color-cream-border: #1e293b;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-color: var(--color-paper);
+            color: var(--color-ink);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .container {
+            text-align: center;
+            padding: 2rem;
+            max-width: 500px;
+        }
+
+        .error-code {
+            font-size: 8rem;
+            font-weight: 800;
+            margin: 0;
+            line-height: 1;
+            background: linear-gradient(135deg, var(--color-ochre), #f59e0b);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            letter-spacing: -0.05em;
+        }
+
+        h1 {
+            font-size: 2rem;
+            font-weight: 700;
+            margin: 1rem 0 0.5rem;
+            letter-spacing: -0.02em;
+        }
+
+        p {
+            color: var(--color-ink-muted);
+            font-size: 1.125rem;
+            line-height: 1.6;
+            margin-bottom: 2rem;
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            padding: 0.875rem 1.5rem;
+            background-color: var(--color-ochre);
+            color: white;
+            text-decoration: none;
+            border-radius: 0.75rem;
+            font-weight: 600;
+            transition: all 0.2s ease;
+            box-shadow: 0 10px 15px -3px rgba(217, 119, 6, 0.3);
+        }
+
+        .btn:hover {
+            background-color: var(--color-ochre-deep);
+            transform: translateY(-2px);
+            box-shadow: 0 20px 25px -5px rgba(217, 119, 6, 0.4);
+        }
+
+        .logo {
+            margin-bottom: 2rem;
+        }
+    </style>
+    <script>
+        (function () {
+            try {
+                var k = 'edumark-theme';
+                var s = localStorage.getItem(k);
+                var d = window.matchMedia('(prefers-color-scheme: dark)').matches;
+                var mode = s === 'light' || s === 'dark' ? s : d ? 'dark' : 'light';
+                document.documentElement.classList.toggle('dark', mode === 'dark');
+            } catch (e) {}
+        })();
+    </script>
+</head>
+<body>
+    <div class="container">
+        <div class="error-code">404</div>
+        <h1>Lost in the halls?</h1>
+        <p>The page you're looking for doesn't exist or has been moved to a different department.</p>
+        <a href="/" class="btn">Back to Dashboard</a>
+    </div>
+</body>
+</html>
