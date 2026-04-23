@@ -46,7 +46,7 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
   };
 
   return (
-    <div className="min-h-screen flex flex-col lg:grid lg:grid-cols-2 bg-transparent relative">
+    <div className="min-h-screen lg:h-screen lg:overflow-hidden flex flex-col lg:grid lg:grid-cols-2 bg-transparent relative">
       <div className="fixed top-4 right-4 z-50 sm:top-6 sm:right-6">
         <ThemeToggle className="bg-card/80 shadow-sm border border-cream-border/80" />
       </div>
@@ -80,7 +80,7 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
           <h1
             className="font-sans text-3xl sm:text-4xl font-semibold text-ink tracking-tight text-balance leading-tight"
           >
-            Class attendance,{' '}
+            Edumark: Attendance management{' '}
             <span className="text-gradient-cool">in one place</span>.
           </h1>
           <p className="mt-4 text-ink-muted text-base sm:text-lg leading-relaxed text-pretty">
@@ -88,20 +88,40 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
             administration can use—without the extra noise.
           </p>
 
-          <ul className="mt-8 space-y-2.5 text-sm text-ink/90">
-            <li className="flex items-start gap-2.5">
-              <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-ochre shrink-0 shadow-[0_0_8px_-1px_var(--color-ochre)]" />
-              Time-weighted attendance (TWAS) to reflect recent absences
-            </li>
-            <li className="flex items-start gap-2.5">
-              <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-aqua shrink-0 shadow-[0_0_8px_-1px_var(--color-aqua)]" />
-              Separate views for staff and for students
-            </li>
-            <li className="flex items-start gap-2.5">
-              <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-violet shrink-0 shadow-[0_0_8px_-1px_var(--color-violet)]" />
-              Reports and exports for your program
-            </li>
-          </ul>
+          <div className="mt-12 grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-10">
+            <div>
+              <h3 className="font-sans text-sm font-semibold text-ink uppercase tracking-wider mb-3">
+                Advanced Analytics
+              </h3>
+              <p className="text-sm text-ink-muted leading-relaxed">
+                Our School ERP utilizes time-weighted attendance (TWAS) to identify at-risk students before they fall behind, providing actionable insights for faculty.
+              </p>
+            </div>
+            <div>
+              <h3 className="font-sans text-sm font-semibold text-ink uppercase tracking-wider mb-3">
+                Faculty Management
+              </h3>
+              <p className="text-sm text-ink-muted leading-relaxed">
+                Streamline timetable management and lesson tracking with an intuitive interface designed for busy educators and administrators.
+              </p>
+            </div>
+            <div>
+              <h3 className="font-sans text-sm font-semibold text-ink uppercase tracking-wider mb-3">
+                Secure Portals
+              </h3>
+              <p className="text-sm text-ink-muted leading-relaxed">
+                Separate, secure access for staff and students ensures data privacy while providing real-time visibility into attendance records and reports.
+              </p>
+            </div>
+            <div>
+              <h3 className="font-sans text-sm font-semibold text-ink uppercase tracking-wider mb-3">
+                Enterprise Reporting
+              </h3>
+              <p className="text-sm text-ink-muted leading-relaxed">
+                Generate and export comprehensive attendance reports compatible with institutional requirements, simplifying school administration workflows.
+              </p>
+            </div>
+          </div>
         </motion.div>
       </section>
 
@@ -112,11 +132,11 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
           transition={{ duration: 0.5, delay: 0.1 }}
           className="w-full max-w-md"
         >
-          <div className="mb-8 rounded-2xl border border-cream-border bg-card/90 p-6 sm:p-8 shadow-lg shadow-ochre/5 ring-1 ring-aqua/10 backdrop-blur-md">
+          <div className="rounded-2xl border border-cream-border bg-card/90 p-6 sm:p-8 shadow-lg shadow-ochre/5 ring-1 ring-aqua/10 backdrop-blur-md">
           <div className="mb-8">
             <p className="eyebrow">Sign in</p>
             <h2 className="font-sans text-2xl sm:text-3xl font-semibold text-ink mt-2 tracking-tight">
-              Welcome back
+              Sign in to your portal
             </h2>
             <p className="text-ink-muted mt-2 text-sm sm:text-base leading-relaxed">
               Use your school email. Faculty see classes; students see their own

@@ -41,6 +41,8 @@ export default function App() {
   const fetchProfile = async (userId: string) => {
     setProfileError(null);
     
+    console.log('Checking profile for userId:', userId);
+    
     // First try to fetch a faculty profile
     const { data: profileData, error: profileError } = await supabase
       .from('profiles')
@@ -48,6 +50,8 @@ export default function App() {
       .eq('id', userId)
       .single();
     
+    if (profileError) console.warn('Profile fetch error:', profileError);
+
     if (profileData && !profileError) {
       setInstitutionId(profileData.institution_id || null);
       setProfile({
@@ -67,6 +71,8 @@ export default function App() {
       .select('*')
       .eq('user_id', userId)
       .single();
+
+    if (studentError) console.warn('Student fetch error:', studentError);
 
     if (studentData && !studentError) {
       setProfile({

@@ -20,7 +20,7 @@ import {
 } from 'lucide-react';
 import { SUBJECTS, DIVISIONS, type SubjectId, type DivisionId } from '../constants';
 import type { Student, Profile } from '../types';
-import { cn } from '../utils/attendance';
+import { cn, getCorrectBatchesForDivision } from '../utils/attendance';
 import { motion, AnimatePresence } from 'motion/react';
 import { supabase } from '../lib/supabase';
 import { useSearchParams } from 'react-router-dom';
@@ -46,10 +46,10 @@ export default function AttendancePage({
     profile.role === 'admin'
       ? SUBJECTS
       : SUBJECTS.filter(
-          (sub) =>
-            profile.assigned_subjects.includes(sub) ||
-            (sub === 'DEIC-T' && profile.assigned_subjects.includes('DEIC')),
-        );
+        (sub) =>
+          profile.assigned_subjects.includes(sub) ||
+          (sub === 'DEIC-T' && profile.assigned_subjects.includes('DEIC')),
+      );
 
   const [selectedSubject, setSelectedSubject] = useState<SubjectId>(
     availableSubjects[0] || SUBJECTS[0],
@@ -175,7 +175,7 @@ export default function AttendancePage({
 
   const isPractical = selectedSubject.endsWith('L') || selectedSubject === 'PBL';
 
-  const filteredStudents = useMemo(() => 
+  const filteredStudents = useMemo(() =>
     students.filter(
       (s) =>
         s.division === selectedDivision &&
@@ -210,7 +210,7 @@ export default function AttendancePage({
         const fullNum = parseInt(match[0], 10);
         const lastTwoMatch = s.rollNo.match(/\d{1,2}$/);
         const shortNum = lastTwoMatch ? parseInt(lastTwoMatch[0], 10) : -1;
-        
+
         return num === fullNum || num === shortNum;
       });
 
@@ -329,10 +329,17 @@ export default function AttendancePage({
       const { data, error } = await query;
 
       if (!error && data && data.length > 0) {
-        const uniqueBatches = Array.from(new Set(data.map((d) => d.batch as string))).sort();
+        const allowedBatches = new Set(getCorrectBatchesForDivision(selectedDivision));
+        
+        const uniqueBatches = Array.from(new Set(data.map((d) => d.batch as string)))
+          .filter(b => allowedBatches.has(b))
+          .sort();
+
         setValidBatches(uniqueBatches);
-        if (!uniqueBatches.includes(selectedBatch)) {
+        if (uniqueBatches.length > 0 && !uniqueBatches.includes(selectedBatch)) {
           setSelectedBatch(uniqueBatches[0]);
+        } else if (uniqueBatches.length === 0) {
+          setSelectedBatch('');
         }
       } else {
         setValidBatches([]);
@@ -804,7 +811,7 @@ export default function AttendancePage({
                   className={cn(
                     'group relative p-4 rounded-2xl border text-left overflow-hidden',
                     (availableSubjects.length === 0 || validDivisions.length === 0) &&
-                      'opacity-50 cursor-not-allowed',
+                    'opacity-50 cursor-not-allowed',
                     justSaved
                       ? 'bg-night text-white border-night scale-[0.98]'
                       : isAbsent

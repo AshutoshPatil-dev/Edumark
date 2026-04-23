@@ -1,6 +1,16 @@
 <!doctype html>
+<!-- Copyright (c) 2024-2026 Ashutosh Patil. All Rights Reserved. -->
 <html lang="en">
   <head>
+    <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-GH5SVYC58B"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+
+      gtag('config', 'G-GH5SVYC58B');
+    </script>
     <script>
       (function () {
         try {
@@ -16,34 +26,71 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#09090b" media="(prefers-color-scheme: dark)" />
     <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)" />
+    <link rel="manifest" href="/manifest.json" />
+    <link rel="icon" type="image/png" href="/pwa-192.png" />
     <link rel="apple-touch-icon" href="/pwa-192.png" />
-    <title>EduMark - Attendance for your institution</title>
-    <meta name="description" content="EduMark helps schools and colleges mark attendance, track at-risk students, and export class reports in one place." />
-    <meta name="keywords" content="attendance management, student tracking, education software, EduMark, school management" />
-    <meta name="author" content="EduMark" />
-    <meta name="robots" content="noindex, nofollow" />
+    <title>EduMark — Comprehensive School ERP & Attendance System</title>
+    <link rel="canonical" href="https://edumark.pages.dev/" />
+    <meta name="description" content="EduMark: The comprehensive school ERP & attendance management system. Track student attendance, manage faculty timetables, and export detailed reports." />
+    <meta name="keywords" content="edumark, attendance management, school erp, student tracking system, college attendance software, faculty timetable manager, education ERP, attendance reports" />
+    <meta name="author" content="EduMark Team" />
+    <meta name="robots" content="index, follow" />
+    <meta name="google-site-verification" content="d8lWKIOh-z6HalafVVXPscF6Dlt-YnkKVs_Lkq2djRk" />
 
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
+      rel="preload"
+      as="style"
       href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap"
-      rel="stylesheet"
     />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap"
+      media="print"
+      onload="this.media='all'"
+    />
+    <noscript>
+      <link
+        rel="stylesheet"
+        href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap"
+      />
+    </noscript>
 
     <!-- Open Graph / Facebook -->
     <meta property="og:type" content="website" />
-    <meta property="og:url" content="https://edumark-app.netlify.app/" />
-    <meta property="og:title" content="EduMark - Attendance for your institution" />
-    <meta property="og:description" content="Track class attendance, spot at-risk students, and export the records your school needs." />
+    <meta property="og:url" content="https://edumark.pages.dev/" />
+    <meta property="og:site_name" content="EduMark" />
+    <meta property="og:title" content="EduMark — Smart Attendance Management & Student Tracking ERP" />
+    <meta property="og:description" content="Track class attendance, spot at-risk students, and export the records your school needs with EduMark's intuitive ERP platform." />
+    <meta property="og:image" content="https://edumark.pages.dev/og-image.png" />
+    <meta property="og:image:secure_url" content="https://edumark.pages.dev/og-image.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
 
     <!-- Twitter -->
     <meta property="twitter:card" content="summary_large_image" />
-    <meta property="twitter:url" content="https://edumark-app.netlify.app/" />
-    <meta property="twitter:title" content="EduMark - Attendance for your institution" />
-    <meta property="twitter:description" content="Track class attendance, spot at-risk students, and export the records your school needs." />
+    <meta property="twitter:url" content="https://edumark.pages.dev/" />
+    <meta property="twitter:title" content="EduMark — Smart Attendance Management & Student Tracking ERP" />
+    <meta property="twitter:description" content="Track class attendance, spot at-risk students, and export the records your school needs with EduMark's intuitive ERP platform." />
+    <meta property="twitter:image" content="https://edumark.pages.dev/og-image.png" />
+
+    <!-- Schema.org JSON-LD -->
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "WebSite",
+        "name": "EduMark",
+        "alternateName": "EduMark ERP",
+        "url": "https://edumark.pages.dev/",
+        "description": "Smart Attendance Management & Student Tracking ERP for modern educational institutions."
+      }
+    </script>
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <h1 style="position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); border: 0;">EduMark: Comprehensive Attendance Management System & School ERP</h1>
+    </div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

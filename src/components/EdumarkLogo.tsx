@@ -34,7 +34,7 @@ export default function EdumarkLogo({
       ? { bg: "#ffffff", stroke: "#0c1222", accent: "#06b6d4", ring: "#e2e8f0" }
       : variant === "outline"
       ? { bg: "transparent", stroke: "#0c1222", accent: "#06b6d4", ring: "#0c1222" }
-      : { bg: "#6366f1", stroke: "#f8fafc", accent: "#22d3ee", ring: "#4f46e5" };
+      : { bg: "#0070f3", stroke: "#f8fafc", accent: "#22d3ee", ring: "#005ae0" };
 
   return (
     <svg

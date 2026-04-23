@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { DIVISIONS, SUBJECTS, type DivisionId } from '../constants';
-import { Calendar, Plus, Edit2, Trash2 } from 'lucide-react';
-import { cn } from '../utils/attendance';
+import { Calendar, Plus, Edit2, Trash2, Info } from 'lucide-react';
+import { cn, getCorrectBatchesForDivision } from '../utils/attendance';
 import { useInstitution } from '../context/InstitutionContext';
+import { writeAdminLog } from '../utils/admin';
 
 export default function AdminTimetableEditor() {
   const { institutionId, scopeQuery } = useInstitution();
@@ -55,6 +56,7 @@ export default function AdminTimetableEditor() {
 
   const handleSaveSlot = async () => {
     if (!editingSlot) return;
+    setIsLoading(true);
     
     const payload = {
       day_of_week: editingSlot.day,
@@ -66,21 +68,65 @@ export default function AdminTimetableEditor() {
       institution_id: institutionId
     };
 
-    if (editingSlot.id) {
-      await supabase.from('timetable').update(payload).eq('id', editingSlot.id);
-    } else {
-      await supabase.from('timetable').insert([payload]);
+    try {
+      let error;
+      if (editingSlot.id) {
+        const { error: updateError } = await supabase.from('timetable').update(payload).eq('id', editingSlot.id);
+        error = updateError;
+      } else {
+        const { error: insertError } = await supabase.from('timetable').insert([payload]);
+        error = insertError;
+      }
+
+      if (error) throw error;
+      
+      setIsModalOpen(false);
+      fetchData();
+
+      // Log the change
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        await writeAdminLog(
+          user.id,
+          'timetable',
+          editingSlot.id ? 'Updated timetable slot' : 'Added timetable slot',
+          `${formSubject} | Day ${editingSlot.day}, Lec ${editingSlot.lectureNo} | Div ${selectedDivision}${formBatch ? `, Batch ${formBatch}` : ''}`
+        );
+      }
+    } catch (err: any) {
+      console.error('Error saving timetable slot:', err);
+      alert(err.message || 'Failed to save timetable slot');
+    } finally {
+      setIsLoading(false);
     }
-    
-    setIsModalOpen(false);
-    fetchData();
   };
 
   const handleDeleteSlot = async () => {
     if (editingSlot?.id) {
-      await supabase.from('timetable').delete().eq('id', editingSlot.id);
-      setIsModalOpen(false);
-      fetchData();
+      setIsLoading(true);
+      try {
+        const { error } = await supabase.from('timetable').delete().eq('id', editingSlot.id);
+        if (error) throw error;
+        
+        setIsModalOpen(false);
+        fetchData();
+
+        // Log the deletion
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          await writeAdminLog(
+            user.id,
+            'timetable',
+            'Deleted timetable slot',
+            `Removed slot | Day ${editingSlot.day}, Lec ${editingSlot.lectureNo} | Div ${selectedDivision}`
+          );
+        }
+      } catch (err: any) {
+        console.error('Error deleting timetable slot:', err);
+        alert(err.message || 'Failed to delete timetable slot');
+      } finally {
+        setIsLoading(false);
+      }
     }
   };
 
@@ -102,11 +148,11 @@ export default function AdminTimetableEditor() {
         <table className="w-full text-left border-collapse min-w-[800px]">
           <thead>
             <tr>
-              <th className="w-32 p-3 bg-paper border-b border-r border-cream-border text-center text-xs font-semibold uppercase tracking-wider text-ink-muted">
+              <th className="w-32 p-3 bg-paper border-b border-r border-cream-border text-center text-xs font-semibold uppercase tracking-wider text-ink">
                 Day
               </th>
               {Array.from({ length: maxLectures }).map((_, i) => (
-                <th key={i} className="p-3 bg-paper border-b border-cream-border text-center text-xs font-semibold uppercase tracking-wider text-ink-muted">
+                <th key={i} className="p-3 bg-paper border-b border-cream-border text-center text-xs font-semibold uppercase tracking-wider text-ink">
                   Lecture {i + 1}
                 </th>
               ))}
@@ -117,7 +163,7 @@ export default function AdminTimetableEditor() {
               const dayNum = r + 1;
               return (
                 <tr key={day}>
-                  <td className="p-3 border-r border-b border-cream-border text-center font-bold text-ink-muted bg-paper/50">
+                  <td className="p-3 border-r border-b border-cream-border text-center font-bold text-ink bg-paper/50">
                     {day}
                   </td>
                   {Array.from({ length: maxLectures }).map((_, c) => {
@@ -131,7 +177,7 @@ export default function AdminTimetableEditor() {
                             onClick={() => handleCellClick(dayNum, lectureNo, slot)}
                             className="group relative bg-ochre/10 border border-ochre/20 hover:border-ochre/50 rounded-xl p-2 cursor-pointer transition-all"
                           >
-                            <p className="font-semibold text-ochre-deep text-sm">{slot.subject_id}</p>
+                            <p className="font-semibold text-ink dark:text-white/75 text-sm">{slot.subject_id}</p>
                             <p className="text-xs text-ink-muted truncate mt-0.5">
                               {profiles.find(p => p.id === slot.faculty_id)?.full_name || 'Unknown'}
                             </p>
@@ -199,18 +245,66 @@ export default function AdminTimetableEditor() {
                   onChange={e => setFormBatch(e.target.value)}
                   className="w-full p-2.5 bg-paper border border-cream-border rounded-xl outline-none focus:ring-2 focus:ring-ochre/20"
                 />
+                <div className="mt-2 flex flex-wrap gap-1.5">
+                  {getCorrectBatchesForDivision(selectedDivision).map(b => (
+                    <button
+                      key={b}
+                      onClick={() => setFormBatch(b)}
+                      className={cn(
+                        "px-2 py-1 rounded-lg text-[0.65rem] font-bold border transition-all",
+                        formBatch === b 
+                          ? "bg-ochre text-white border-ochre" 
+                          : "bg-paper text-ink-muted border-cream-border hover:border-ochre/40"
+                      )}
+                    >
+                      {b}
+                    </button>
+                  ))}
+                  <button
+                    onClick={() => setFormBatch('')}
+                    className={cn(
+                      "px-2 py-1 rounded-lg text-[0.65rem] font-bold border transition-all",
+                      formBatch === '' 
+                        ? "bg-night text-white border-night" 
+                        : "bg-paper text-ink-muted border-cream-border hover:border-ochre/40"
+                    )}
+                  >
+                    NONE
+                  </button>
+                </div>
               </div>
             </div>
 
             <div className="pt-2 flex items-center justify-between gap-3">
               {editingSlot?.id ? (
-                <button onClick={handleDeleteSlot} className="p-2 text-rose-500 hover:bg-rose-50 rounded-lg">
-                  <Trash2 className="w-5 h-5" />
+                <button 
+                  onClick={handleDeleteSlot} 
+                  disabled={isLoading}
+                  className="p-2 text-rose-500 hover:bg-rose-50 rounded-lg disabled:opacity-50"
+                >
+                  {isLoading ? (
+                    <div className="w-5 h-5 border-2 border-rose-500/30 border-t-rose-500 rounded-full animate-spin" />
+                  ) : (
+                    <Trash2 className="w-5 h-5" />
+                  )}
                 </button>
               ) : <div />}
               <div className="flex gap-2">
-                <button onClick={() => setIsModalOpen(false)} className="px-4 py-2 text-ink hover:bg-paper rounded-xl font-medium">Cancel</button>
-                <button onClick={handleSaveSlot} className="px-4 py-2 bg-ochre hover:bg-ochre-deep text-white rounded-xl font-medium">Save</button>
+                <button 
+                  onClick={() => setIsModalOpen(false)} 
+                  disabled={isLoading}
+                  className="px-4 py-2 text-ink hover:bg-paper rounded-xl font-medium disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+                <button 
+                  onClick={handleSaveSlot} 
+                  disabled={isLoading}
+                  className="px-4 py-2 bg-ochre hover:bg-ochre-deep text-white rounded-xl font-medium disabled:opacity-50 flex items-center gap-2"
+                >
+                  {isLoading && <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />}
+                  {editingSlot?.id ? 'Update' : 'Save'}
+                </button>
               </div>
             </div>
           </div>
