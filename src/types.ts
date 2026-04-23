@@ -23,7 +23,7 @@ export interface Student {
 
 export interface Profile {
   id: string;
-  role: 'faculty' | 'student' | 'admin';
+  role: 'faculty' | 'student' | 'admin' | 'super_admin';
   full_name: string | null;
   assigned_subjects: string[];
   roll_no: string | null;

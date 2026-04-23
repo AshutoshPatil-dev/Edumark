@@ -30,6 +30,12 @@
     <link rel="icon" type="image/png" href="/pwa-192.png" />
     <link rel="apple-touch-icon" href="/pwa-192.png" />
     <title>EduMark — Comprehensive School ERP & Attendance System</title>
+    <!-- Capture Supabase invite/recovery hashes before they are cleared -->
+    <script>
+      if (window.location.hash.includes('type=invite') || window.location.hash.includes('type=recovery')) {
+        window.sessionStorage.setItem('requires_password_setup', 'true');
+      }
+    </script>
     <link rel="canonical" href="https://edumark.pages.dev/" />
     <meta name="description" content="EduMark: The comprehensive school ERP & attendance management system. Track student attendance, manage faculty timetables, and export detailed reports." />
     <meta name="keywords" content="edumark, attendance management, school erp, student tracking system, college attendance software, faculty timetable manager, education ERP, attendance reports" />

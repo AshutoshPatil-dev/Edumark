@@ -22,28 +22,11 @@ import { DIVISIONS, type DivisionId } from '../constants';
 import { cn, getCorrectBatchesForDivision } from '../utils/attendance';
 import type { AdminLog, AdminLogCategory, Profile } from '../types';
 import AdminTimetableEditor from '../components/AdminTimetableEditor';
+import AdminStudentManager from '../components/AdminStudentManager';
 import { writeAdminLog } from '../utils/admin';
 import { motion, AnimatePresence } from 'motion/react';
 
-function getDivisionFromRollNo(rollNo: string): DivisionId {
-  if (rollNo && rollNo.length >= 5) {
-    const divChar = rollNo.charAt(4);
-    const divNum = parseInt(divChar, 10);
-    if (!isNaN(divNum) && divNum >= 1 && divNum <= 26) {
-      const divLetter = String.fromCharCode(64 + divNum);
-      if (DIVISIONS.includes(divLetter as DivisionId)) {
-        return divLetter as DivisionId;
-      }
-    }
-  }
-  return 'A';
-}
 
-
-
-interface AdminPageProps {
-  refreshData: () => Promise<void>;
-}
 
 export default function AdminPage({ refreshData }: AdminPageProps) {
   const { institution, institutionId, scopeQuery } = useInstitution();
@@ -59,11 +42,6 @@ export default function AdminPage({ refreshData }: AdminPageProps) {
   const [allProfiles, setAllProfiles] = useState<Profile[]>([]);
   const [isLoadingProfiles, setIsLoadingProfiles] = useState(false);
 
-  const [name, setName] = useState('');
-  const [rollNo, setRollNo] = useState('');
-  const [batch, setBatch] = useState('');
-
-  const [bulkText, setBulkText] = useState('');
   const [timetableCSV, setTimetableCSV] = useState('');
 
   const [logs, setLogs] = useState<AdminLog[]>([]);
@@ -203,87 +181,7 @@ export default function AdminPage({ refreshData }: AdminPageProps) {
     return user?.id ?? null;
   };
 
-  const handleSingleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsLoading(true);
-    setMessage(null);
-    try {
-      const division = getDivisionFromRollNo(rollNo);
-      const { error } = await supabase
-        .from('students')
-        .upsert([{ name, roll_no: rollNo, division, batch: batch || null, institution_id: institutionId }], {
-          onConflict: 'roll_no',
-        });
-      if (error) throw error;
 
-      const actorId = await getCurrentUserId();
-      if (actorId) {
-        await writeAdminLog(
-          actorId,
-          'student',
-          'Added student',
-          `${name} (${rollNo}) → Division ${division}${batch ? `, Batch ${batch}` : ''}`,
-          institutionId,
-        );
-      }
-
-      setMessage({ type: 'success', text: `Student ${name} added to Division ${division}.` });
-      setName('');
-      setRollNo('');
-      setBatch('');
-      await refreshData();
-      if (mainTab === 'logs') fetchLogs(); // Refresh logs if on that tab
-    } catch (err: any) {
-      setMessage({ type: 'error', text: err.message || 'Failed to add student.' });
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleBulkSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsLoading(true);
-    setMessage(null);
-    try {
-      let lines = bulkText
-        .split('\n')
-        .map((l) => l.trim())
-        .filter((l) => l.length > 0);
-      if (lines.length > 0 && lines[0].toLowerCase().includes('name') && lines[0].toLowerCase().includes('roll')) {
-        lines = lines.slice(1);
-      }
-      const studentsToInsert = lines.map((line, index) => {
-        const parts = line.split(',').map((p) => p.trim());
-        if (parts.length < 2) throw new Error(`Invalid format on line ${index + 1}. Expected: Name, RollNo, Batch(optional)`);
-        const [n, r, b] = parts;
-        const d = getDivisionFromRollNo(r);
-        return { name: n, roll_no: r, division: d, batch: b || null, institution_id: institutionId };
-      });
-
-      const { error } = await supabase.from('students').upsert(studentsToInsert, { onConflict: 'roll_no' });
-      if (error) throw error;
-
-      const actorId = await getCurrentUserId();
-      if (actorId) {
-        await writeAdminLog(
-          actorId,
-          'student',
-          'Bulk added students',
-          `${studentsToInsert.length} students uploaded via CSV`,
-          institutionId,
-        );
-      }
-
-      setMessage({ type: 'success', text: `Successfully added ${studentsToInsert.length} students.` });
-      setBulkText('');
-      await refreshData();
-      if (mainTab === 'logs') fetchLogs();
-    } catch (err: any) {
-      setMessage({ type: 'error', text: err.message || 'Failed to add students.' });
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
   const handleTimetableSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -409,27 +307,14 @@ export default function AdminPage({ refreshData }: AdminPageProps) {
           <>
             <div className="flex items-center gap-4 mb-8">
               <div className="w-11 h-11 bg-cream rounded-xl flex items-center justify-center border border-cream-border">
-                <UserPlus className="w-5 h-5 text-ink" />
+                <Users className="w-5 h-5 text-ink" />
               </div>
               <div>
-                <p className="eyebrow">Roster</p>
-                <h2 className="font-sans text-xl font-semibold text-ink tracking-tight">Add students</h2>
+                <p className="eyebrow">Directory</p>
+                <h2 className="font-sans text-xl font-semibold text-ink tracking-tight">Student Management</h2>
               </div>
             </div>
-            <div className="flex gap-1 mb-8 border-b border-cream-border">
-              <button
-                onClick={() => { setStudentTab('single'); setMessage(null); }}
-                className={cn('px-4 py-2.5 text-sm font-semibold border-b-2 -mb-px', studentTab === 'single' ? 'border-ochre text-ink' : 'border-transparent text-ink-muted hover:text-ink')}
-              >
-                Single entry
-              </button>
-              <button
-                onClick={() => { setStudentTab('bulk'); setMessage(null); }}
-                className={cn('px-4 py-2.5 text-sm font-semibold border-b-2 -mb-px', studentTab === 'bulk' ? 'border-ochre text-ink' : 'border-transparent text-ink-muted hover:text-ink')}
-              >
-                Bulk upload
-              </button>
-            </div>
+            <AdminStudentManager />
           </>
         )}
 
@@ -508,72 +393,7 @@ export default function AdminPage({ refreshData }: AdminPageProps) {
           </div>
         )}
 
-        {/* Single student form */}
-        {mainTab === 'students' && studentTab === 'single' && (
-          <form onSubmit={handleSingleSubmit} className="space-y-5 max-w-md">
-            <div className="space-y-1.5">
-              <label className="eyebrow block">Full name</label>
-              <input type="text" required value={name} onChange={(e) => setName(e.target.value)} className="w-full px-4 py-3 bg-paper border border-cream-border rounded-xl focus:outline-none focus:ring-4 focus:ring-ochre/10 focus:border-ochre/60 font-medium text-ink" placeholder="e.g. John Doe" />
-            </div>
-            <div className="space-y-1.5">
-              <label className="eyebrow block">Roll number</label>
-              <input type="text" required value={rollNo} onChange={(e) => setRollNo(e.target.value)} className="w-full px-4 py-3 bg-paper border border-cream-border rounded-xl focus:outline-none focus:ring-4 focus:ring-ochre/10 focus:border-ochre/60 font-medium text-ink font-mono" placeholder="25FC304" />
-              <p className="text-[0.75rem] text-ink-muted mt-1.5">Division is inferred from the roll number automatically.</p>
-            </div>
-            <div className="space-y-1.5">
-              <label className="eyebrow block">Batch (optional)</label>
-              <input type="text" value={batch} onChange={(e) => setBatch(e.target.value)} className="w-full px-4 py-3 bg-paper border border-cream-border rounded-xl focus:outline-none focus:ring-4 focus:ring-ochre/10 focus:border-ochre/60 font-medium text-ink" placeholder="e.g. F1" />
-              <div className="mt-2 flex flex-wrap gap-1.5">
-                {getCorrectBatchesForDivision(getDivisionFromRollNo(rollNo)).map(b => (
-                  <button
-                    key={b}
-                    type="button"
-                    onClick={() => setBatch(b)}
-                    className={cn(
-                      "px-2.5 py-1 rounded-lg text-[0.65rem] font-bold border transition-all",
-                      batch === b 
-                        ? "bg-ochre text-white border-ochre" 
-                        : "bg-paper text-ink-muted border-cream-border hover:border-ochre/40"
-                    )}
-                  >
-                    {b}
-                  </button>
-                ))}
-                <button
-                  type="button"
-                  onClick={() => setBatch('')}
-                  className={cn(
-                    "px-2.5 py-1 rounded-lg text-[0.65rem] font-bold border transition-all",
-                    batch === '' 
-                      ? "bg-night text-white border-night" 
-                      : "bg-paper text-ink-muted border-cream-border hover:border-ochre/40"
-                  )}
-                >
-                  NONE
-                </button>
-              </div>
-            </div>
-            <button type="submit" disabled={isLoading} className="w-full bg-ochre hover:bg-ochre-deep text-white font-semibold py-3 px-4 rounded-xl disabled:opacity-50 flex items-center justify-center gap-2">
-              <UserPlus className="w-4 h-4" />
-              <span>{isLoading ? 'Adding…' : 'Add student'}</span>
-            </button>
-          </form>
-        )}
 
-        {/* Bulk student form */}
-        {mainTab === 'students' && studentTab === 'bulk' && (
-          <form onSubmit={handleBulkSubmit} className="space-y-5">
-            <div className="space-y-1.5">
-              <label className="eyebrow block">CSV data</label>
-              <p className="text-[0.75rem] text-ink-muted mb-2">Format: <code className="font-mono bg-cream px-1.5 py-0.5 rounded">Name, RollNo, Batch</code>. One student per line.</p>
-              <textarea required value={bulkText} onChange={(e) => setBulkText(e.target.value)} rows={10} className="w-full px-4 py-3 bg-paper border border-cream-border rounded-xl focus:outline-none focus:ring-4 focus:ring-ochre/10 focus:border-ochre/60 font-mono text-sm text-ink" placeholder={"John Doe, 25FC304, F1\nJane Smith, 25FC205, F2"} />
-            </div>
-            <button type="submit" disabled={isLoading} className="bg-ochre hover:bg-ochre-deep text-white font-semibold py-3 px-6 rounded-xl disabled:opacity-50 flex items-center justify-center gap-2">
-              <Upload className="w-4 h-4" />
-              <span>{isLoading ? 'Processing…' : 'Upload students'}</span>
-            </button>
-          </form>
-        )}
 
         {/* Timetable form */}
         {mainTab === 'timetable' && timetableTab === 'visual' && (

@@ -23,6 +23,8 @@ import InstitutionOnboarding from './pages/InstitutionOnboarding';
 import { InstitutionProvider } from './context/InstitutionContext';
 import { SyncProvider } from './context/SyncContext';
 import { supabase } from './lib/supabase';
+import SuperAdminDashboard from './pages/SuperAdminDashboard';
+import SetPasswordModal from './components/SetPasswordModal';
 
 // Lazy load heavy pages
 const ReportPage = lazy(() => import('./pages/ReportPage'));
@@ -37,6 +39,7 @@ export default function App() {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [profileError, setProfileError] = useState<string | null>(null);
   const [institutionId, setInstitutionId] = useState<string | null>(null);
+  const [requiresPasswordSetup, setRequiresPasswordSetup] = useState(false);
 
   const fetchProfile = async (userId: string) => {
     setProfileError(null);
@@ -90,6 +93,13 @@ export default function App() {
   };
 
   useEffect(() => {
+    // Check hash on mount to detect invites or password recoveries
+    // The hash was captured by index.html before Supabase cleared it
+    if (window.sessionStorage.getItem('requires_password_setup') === 'true') {
+      setRequiresPasswordSetup(true);
+      window.sessionStorage.removeItem('requires_password_setup');
+    }
+
     // Check active session
     supabase.auth.getSession().then(({ data: { session } }) => {
       setIsLoggedIn(!!session);
@@ -126,20 +136,22 @@ export default function App() {
     
     try {
       // Fetch students and attendance from Supabase
-      // Feature 12: scope by institution when available
       let studentsQuery = supabase.from('students').select('*');
       let attendanceQuery = supabase.from('attendance').select('*');
 
       if (institutionId) {
         studentsQuery = studentsQuery.eq('institution_id', institutionId);
         attendanceQuery = attendanceQuery.eq('institution_id', institutionId);
+      } else if (profile.role !== 'super_admin') {
+        // Security: If a user has no institution assigned yet, DO NOT fetch all students.
+        setStudents([]);
+        setIsLoading(false);
+        return;
       }
 
       // If student, only fetch their own data
       if (profile.role === 'student' && profile.roll_no) {
         studentsQuery = studentsQuery.eq('roll_no', profile.roll_no);
-        // We'll need to fetch the student ID first to filter attendance, 
-        // or we can just fetch attendance after getting the student.
       }
 
       const { data: studentsData, error: studentsError } = await studentsQuery;
@@ -356,7 +368,12 @@ export default function App() {
                 </div>
               }>
                 <Routes>
-                  {(profile.role === 'faculty' || profile.role === 'admin') ? (
+                  {profile.role === 'super_admin' ? (
+                    <>
+                      <Route path="/" element={<SuperAdminDashboard />} />
+                      <Route path="*" element={<Navigate to="/" replace />} />
+                    </>
+                  ) : (profile.role === 'faculty' || profile.role === 'admin') ? (
                     <>
                       <Route path="/" element={<DashboardPage students={students} />} />
                       <Route 
@@ -381,6 +398,7 @@ export default function App() {
                 </Routes>
               </Suspense>
             </main>
+            {requiresPasswordSetup && <SetPasswordModal onClose={() => setRequiresPasswordSetup(false)} />}
           </div>
         </Router>
       </InstitutionProvider>

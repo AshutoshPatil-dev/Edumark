@@ -49,19 +49,18 @@ export default function Navbar({ onLogout, profile }: NavbarProps) {
     { path: '/leaves', label: 'Leaves', icon: FileText },
   ];
 
-  if (profile.role === 'admin') {
-    facultyItems.push({ path: '/admin', label: 'Admin', icon: UserPlus });
+  let navItems: { path: string; label: string; icon: any }[] = [];
+  
+  if (profile.role === 'super_admin') {
+    navItems = [{ path: '/', label: 'Operations', icon: LayoutDashboard }];
+  } else if (profile.role === 'faculty' || profile.role === 'admin') {
+    navItems = [...facultyItems];
+    if (profile.role === 'admin') {
+      navItems.push({ path: '/admin', label: 'Admin', icon: UserPlus });
+    }
+  } else {
+    navItems = studentItems;
   }
-
-  const studentItems = [
-    { path: '/', label: 'My Record', icon: Users },
-    { path: '/leaves', label: 'My Leaves', icon: FileText },
-  ];
-
-  const navItems =
-    profile.role === 'faculty' || profile.role === 'admin'
-      ? facultyItems
-      : studentItems;
 
   const handleLogoutClick = () => {
     setShowLogoutConfirm(true);

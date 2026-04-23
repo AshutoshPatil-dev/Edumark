@@ -789,7 +789,7 @@ export default function AttendancePage({
             />
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3 relative min-h-[200px]">
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3 relative min-h-[200px] content-start">
             {isLoadingAttendance ? (
               <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 bg-paper/50 backdrop-blur-[2px] rounded-2xl z-20">
                 <div className="w-10 h-10 border-4 border-ochre/20 border-t-ochre rounded-full animate-spin" />

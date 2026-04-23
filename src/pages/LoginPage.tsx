@@ -10,6 +10,7 @@ import { supabase } from '../lib/supabase';
 import EdumarkLogo from '../components/EdumarkLogo';
 import ThemeToggle from '../components/ThemeToggle';
 import { useTheme } from '../context/ThemeContext';
+import RequestAccessForm from '../components/RequestAccessForm';
 
 interface LoginPageProps {
   onLogin: () => void;
@@ -21,6 +22,7 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+  const [view, setView] = useState<'login' | 'request'>('login');
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -127,11 +129,13 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
 
       <section className="order-1 lg:order-2 flex items-center justify-center p-6 sm:p-10 lg:p-14">
         <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.1 }}
+          key={view}
+          initial={{ opacity: 0, x: view === 'login' ? -10 : 10 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.3 }}
           className="w-full max-w-md"
         >
+          {view === 'login' ? (
           <div className="rounded-2xl border border-cream-border bg-card/90 p-6 sm:p-8 shadow-lg shadow-ochre/5 ring-1 ring-aqua/10 backdrop-blur-md">
           <div className="mb-8">
             <p className="eyebrow">Sign in</p>
@@ -209,14 +213,24 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
 
             <div className="pt-2">
               <div className="rule-paper my-6" />
-              <p className="text-[0.75rem] text-ink-muted text-center leading-relaxed">
-                Authorised personnel only. All sessions are logged.
-                <br />
-                Contact your administrator for access.
-              </p>
+              <div className="text-center space-y-4">
+                <button
+                  type="button"
+                  onClick={() => setView('request')}
+                  className="text-sm font-semibold text-ochre hover:text-ochre-deep transition-colors"
+                >
+                  Is your school not on Edumark yet? Request access.
+                </button>
+                <p className="text-[0.75rem] text-ink-muted leading-relaxed">
+                  Authorised personnel only. All sessions are logged.
+                </p>
+              </div>
             </div>
           </form>
           </div>
+          ) : (
+            <RequestAccessForm onBack={() => setView('login')} />
+          )}
         </motion.div>
       </section>
     </div>
