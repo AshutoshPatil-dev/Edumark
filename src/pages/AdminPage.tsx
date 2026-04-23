@@ -11,7 +11,7 @@ import {
   Filter,
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
-import { DIVISIONS, type DivisionId } from '../constants';
+import { DIVISIONS, getBatchesForDivision, type DivisionId } from '../constants';
 import { cn } from '../utils/attendance';
 import type { AdminLog, AdminLogCategory } from '../types';
 import AdminTimetableEditor from '../components/AdminTimetableEditor';
@@ -51,6 +51,7 @@ export default function AdminPage({ refreshData }: AdminPageProps) {
   const [logs, setLogs] = useState<AdminLog[]>([]);
   const [logCategory, setLogCategory] = useState<AdminLogCategory | 'all'>('all');
   const [isLoadingLogs, setIsLoadingLogs] = useState(false);
+  const [isCleaningUp, setIsCleaningUp] = useState(false);
 
   const [isLoading, setIsLoading] = useState(false);
   const [message, setMessage] = useState<{
@@ -230,6 +231,30 @@ export default function AdminPage({ refreshData }: AdminPageProps) {
     }
   };
 
+  const handleCleanupBatches = async () => {
+    if (!window.confirm('This will remove all batches that don\'t match their assigned division (e.g. F6 in Division C). Proceed?')) return;
+    
+    setIsCleaningUp(true);
+    setMessage(null);
+    try {
+      const response = await fetch('/api/admin/fix-batches', { method: 'POST' });
+      const data = await response.json() as any;
+      if (data.success) {
+        setMessage({ 
+          type: 'success', 
+          text: `Cleanup successful! Fixed ${data.results.students} student records and ${data.results.timetable} timetable slots.` 
+        });
+        await refreshData();
+      } else {
+        throw new Error(data.error);
+      }
+    } catch (err: any) {
+      setMessage({ type: 'error', text: err.message || 'Cleanup failed.' });
+    } finally {
+      setIsCleaningUp(false);
+    }
+  };
+
   const tabs = [
     { id: 'students' as const, label: 'Students', icon: UserPlus },
     { id: 'timetable' as const, label: 'Timetable', icon: Calendar },
@@ -264,6 +289,20 @@ export default function AdminPage({ refreshData }: AdminPageProps) {
           Manage rosters, timetable, and a full audit log of all system changes.
         </p>
         <div className="rule-paper" />
+        <div className="flex justify-end">
+          <button
+            onClick={handleCleanupBatches}
+            disabled={isCleaningUp}
+            className="text-[0.7rem] font-bold tracking-widest uppercase text-rose-600 hover:text-rose-700 flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-rose-50 transition-colors border border-transparent hover:border-rose-200"
+          >
+            {isCleaningUp ? (
+              <div className="w-3 h-3 border border-rose-600/30 border-t-rose-600 rounded-full animate-spin" />
+            ) : (
+              <AlertCircle className="w-3 h-3" />
+            )}
+            <span>Cleanup Batch Data</span>
+          </button>
+        </div>
       </header>
 
       {/* Main tabs */}
@@ -405,7 +444,17 @@ export default function AdminPage({ refreshData }: AdminPageProps) {
             </div>
             <div className="space-y-1.5">
               <label className="eyebrow block">Batch (optional)</label>
-              <input type="text" value={batch} onChange={(e) => setBatch(e.target.value)} className="w-full px-4 py-3 bg-paper border border-cream-border rounded-xl focus:outline-none focus:ring-4 focus:ring-ochre/10 focus:border-ochre/60 font-medium text-ink" placeholder="e.g. F1" />
+              <select 
+                value={batch} 
+                onChange={(e) => setBatch(e.target.value)} 
+                className="w-full px-4 py-3 bg-paper border border-cream-border rounded-xl focus:outline-none focus:ring-4 focus:ring-ochre/10 focus:border-ochre/60 font-medium text-ink"
+              >
+                <option value="">No Batch</option>
+                {getBatchesForDivision(getDivisionFromRollNo(rollNo)).map(b => (
+                  <option key={b} value={b}>{b}</option>
+                ))}
+              </select>
+              <p className="text-[0.75rem] text-ink-muted mt-1.5">Available batches for Division {getDivisionFromRollNo(rollNo)}.</p>
             </div>
             <button type="submit" disabled={isLoading} className="w-full bg-ochre hover:bg-ochre-deep text-white font-semibold py-3 px-4 rounded-xl disabled:opacity-50 flex items-center justify-center gap-2">
               <UserPlus className="w-4 h-4" />

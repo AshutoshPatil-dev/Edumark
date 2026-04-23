@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-import { DIVISIONS, SUBJECTS, type DivisionId } from '../constants';
+import { DIVISIONS, SUBJECTS, getBatchesForDivision, type DivisionId } from '../constants';
 import { Calendar, Plus, Edit2, Trash2 } from 'lucide-react';
 import { cn } from '../utils/attendance';
 import { writeAdminLog } from '../utils/admin';
@@ -229,13 +229,16 @@ export default function AdminTimetableEditor() {
 
               <div>
                 <label className="block text-ink-muted mb-1 font-medium">Batch (Optional)</label>
-                <input 
-                  type="text" 
+                <select 
                   value={formBatch} 
-                  placeholder="e.g. F1"
                   onChange={e => setFormBatch(e.target.value)}
                   className="w-full p-2.5 bg-paper border border-cream-border rounded-xl outline-none focus:ring-2 focus:ring-ochre/20"
-                />
+                >
+                  <option value="">Theory (No Batch)</option>
+                  {getBatchesForDivision(selectedDivision).map(b => (
+                    <option key={b} value={b}>{b}</option>
+                  ))}
+                </select>
               </div>
             </div>
 
