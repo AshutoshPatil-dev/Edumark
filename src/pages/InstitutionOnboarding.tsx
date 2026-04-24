@@ -30,7 +30,7 @@ export default function InstitutionOnboarding({ profileId, onComplete }: Institu
       // 1. Create the institution
       const { data: inst, error: instError } = await supabase
         .from('institutions')
-        .insert({ name, slug: cleanSlug })
+        .insert({ name, slug: cleanSlug, created_by: profileId })
         .select()
         .single();
 

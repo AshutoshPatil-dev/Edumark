@@ -29,20 +29,21 @@ export default function SuperAdminDashboard() {
     if (!window.confirm(`Approve ${request.school_name} and create their institution workspace?`)) return;
     
     try {
+      const { data: { user } } = await supabase.auth.getUser();
       const baseSlug = request.school_name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
       const uniqueSlug = `${baseSlug}-${Math.random().toString(36).substring(2, 6)}`;
       
       // 1. Create the institution
       const { error: instError } = await supabase
         .from('institutions')
-        .insert([{ name: request.school_name, slug: uniqueSlug }]);
+        .insert([{ name: request.school_name, slug: uniqueSlug, created_by: user?.id ?? null }]);
 
       if (instError) throw instError;
 
       // 2. Mark request as approved
       const { error: updateError } = await supabase
         .from('institution_requests')
-        .update({ status: 'approved' })
+        .update({ status: 'approved', updated_at: new Date().toISOString() })
         .eq('id', request.id);
         
       if (updateError) throw updateError;
@@ -56,7 +57,10 @@ export default function SuperAdminDashboard() {
 
   const handleReject = async (id: string) => {
     if (!window.confirm('Reject this request?')) return;
-    await supabase.from('institution_requests').update({ status: 'rejected' }).eq('id', id);
+    await supabase
+      .from('institution_requests')
+      .update({ status: 'rejected', updated_at: new Date().toISOString() })
+      .eq('id', id);
     fetchData();
   };
 

@@ -23,6 +23,13 @@ export default function AdminTimetableEditor() {
   const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
   const maxLectures = 6;
 
+  const requireInstitutionId = () => {
+    if (!institutionId) {
+      throw new Error('Institution context is required to manage the timetable.');
+    }
+    return institutionId;
+  };
+
   useEffect(() => {
     fetchData();
   }, [selectedDivision]);
@@ -57,6 +64,7 @@ export default function AdminTimetableEditor() {
   const handleSaveSlot = async () => {
     if (!editingSlot) return;
     setIsLoading(true);
+    const activeInstitutionId = requireInstitutionId();
     
     const payload = {
       day_of_week: editingSlot.day,
@@ -65,13 +73,17 @@ export default function AdminTimetableEditor() {
       faculty_id: formFaculty,
       division: selectedDivision,
       batch: formBatch || null,
-      institution_id: institutionId
+      institution_id: activeInstitutionId
     };
 
     try {
       let error;
       if (editingSlot.id) {
-        const { error: updateError } = await supabase.from('timetable').update(payload).eq('id', editingSlot.id);
+        const { error: updateError } = await supabase
+          .from('timetable')
+          .update(payload)
+          .eq('id', editingSlot.id)
+          .eq('institution_id', activeInstitutionId);
         error = updateError;
       } else {
         const { error: insertError } = await supabase.from('timetable').insert([payload]);
@@ -90,7 +102,8 @@ export default function AdminTimetableEditor() {
           user.id,
           'timetable',
           editingSlot.id ? 'Updated timetable slot' : 'Added timetable slot',
-          `${formSubject} | Day ${editingSlot.day}, Lec ${editingSlot.lectureNo} | Div ${selectedDivision}${formBatch ? `, Batch ${formBatch}` : ''}`
+          `${formSubject} | Day ${editingSlot.day}, Lec ${editingSlot.lectureNo} | Div ${selectedDivision}${formBatch ? `, Batch ${formBatch}` : ''}`,
+          activeInstitutionId,
         );
       }
     } catch (err: any) {
@@ -105,7 +118,12 @@ export default function AdminTimetableEditor() {
     if (editingSlot?.id) {
       setIsLoading(true);
       try {
-        const { error } = await supabase.from('timetable').delete().eq('id', editingSlot.id);
+        const activeInstitutionId = requireInstitutionId();
+        const { error } = await supabase
+          .from('timetable')
+          .delete()
+          .eq('id', editingSlot.id)
+          .eq('institution_id', activeInstitutionId);
         if (error) throw error;
         
         setIsModalOpen(false);
@@ -118,7 +136,8 @@ export default function AdminTimetableEditor() {
             user.id,
             'timetable',
             'Deleted timetable slot',
-            `Removed slot | Day ${editingSlot.day}, Lec ${editingSlot.lectureNo} | Div ${selectedDivision}`
+            `Removed slot | Day ${editingSlot.day}, Lec ${editingSlot.lectureNo} | Div ${selectedDivision}`,
+            activeInstitutionId,
           );
         }
       } catch (err: any) {

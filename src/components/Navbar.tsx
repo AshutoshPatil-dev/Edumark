@@ -48,6 +48,10 @@ export default function Navbar({ onLogout, profile }: NavbarProps) {
     { path: '/report', label: 'Reports', icon: FileBarChart },
     { path: '/leaves', label: 'Leaves', icon: FileText },
   ];
+  const studentItems = [
+    { path: '/', label: 'My Record', icon: Users },
+    { path: '/leaves', label: 'My Leaves', icon: FileText },
+  ];
 
   let navItems: { path: string; label: string; icon: any }[] = [];
   

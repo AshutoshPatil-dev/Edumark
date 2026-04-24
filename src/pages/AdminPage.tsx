@@ -26,7 +26,9 @@ import AdminStudentManager from '../components/AdminStudentManager';
 import { writeAdminLog } from '../utils/admin';
 import { motion, AnimatePresence } from 'motion/react';
 
-
+interface AdminPageProps {
+  refreshData: () => Promise<void>;
+}
 
 export default function AdminPage({ refreshData }: AdminPageProps) {
   const { institution, institutionId, scopeQuery } = useInstitution();
@@ -83,10 +85,14 @@ export default function AdminPage({ refreshData }: AdminPageProps) {
       // Step 2: Fetch profiles for the unique actors
       const actorIds = Array.from(new Set(logsData.map(l => l.actor_id).filter(Boolean)));
       
-      const { data: profilesData, error: profilesError } = await supabase
-        .from('profiles')
-        .select('id, full_name')
-        .in('id', actorIds);
+      const { data: profilesData, error: profilesError } = actorIds.length === 0
+        ? { data: [], error: null }
+        : await scopeQuery(
+            supabase
+              .from('profiles')
+              .select('id, full_name')
+              .in('id', actorIds)
+          );
 
       if (profilesError) {
         console.error('Error fetching profiles for logs:', profilesError);
@@ -116,7 +122,13 @@ export default function AdminPage({ refreshData }: AdminPageProps) {
 
   const fetchProfiles = useCallback(async () => {
     setIsLoadingProfiles(true);
-    const { data } = await scopeQuery(supabase.from('profiles').select('*'));
+    const { data } = await scopeQuery(
+      supabase
+        .from('profiles')
+        .select('*')
+        .in('role', ['faculty', 'admin'])
+        .order('full_name')
+    );
     setAllProfiles((data as Profile[]) ?? []);
     setIsLoadingProfiles(false);
   }, [scopeQuery]);
@@ -135,11 +147,17 @@ export default function AdminPage({ refreshData }: AdminPageProps) {
   }, [institution]);
 
   const handleRoleChange = async (targetProfileId: string, newRole: 'faculty' | 'admin') => {
-    const { error } = await supabase
+    let query = supabase
       .from('profiles')
       .update({ role: newRole })
       .eq('id', targetProfileId);
-    
+
+    if (institutionId) {
+      query = query.eq('institution_id', institutionId);
+    }
+
+    const { error } = await query;
+
     if (!error) {
       const actorId = await getCurrentUserId();
       if (actorId) {
@@ -314,7 +332,7 @@ export default function AdminPage({ refreshData }: AdminPageProps) {
                 <h2 className="font-sans text-xl font-semibold text-ink tracking-tight">Student Management</h2>
               </div>
             </div>
-            <AdminStudentManager />
+            <AdminStudentManager onStudentsChanged={refreshData} />
           </>
         )}
 

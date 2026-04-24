@@ -3,11 +3,6 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-/**
- * @license
- * SPDX-License-Identifier: Apache-2.0
- */
-
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { useState, useEffect, lazy, Suspense } from 'react';
 import { AlertCircle } from 'lucide-react';
@@ -38,14 +33,11 @@ export default function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [profileError, setProfileError] = useState<string | null>(null);
-  const [institutionId, setInstitutionId] = useState<string | null>(null);
   const [requiresPasswordSetup, setRequiresPasswordSetup] = useState(false);
 
   const fetchProfile = async (userId: string) => {
     setProfileError(null);
-    
-    console.log('Checking profile for userId:', userId);
-    
+
     // First try to fetch a faculty profile
     const { data: profileData, error: profileError } = await supabase
       .from('profiles')
@@ -56,7 +48,6 @@ export default function App() {
     if (profileError) console.warn('Profile fetch error:', profileError);
 
     if (profileData && !profileError) {
-      setInstitutionId(profileData.institution_id || null);
       setProfile({
         id: profileData.id,
         role: profileData.role,
@@ -83,7 +74,8 @@ export default function App() {
         role: 'student',
         full_name: studentData.name,
         assigned_subjects: [],
-        roll_no: studentData.roll_no
+        roll_no: studentData.roll_no,
+        institution_id: studentData.institution_id || null,
       });
       return;
     }
@@ -139,9 +131,9 @@ export default function App() {
       let studentsQuery = supabase.from('students').select('*');
       let attendanceQuery = supabase.from('attendance').select('*');
 
-      if (institutionId) {
-        studentsQuery = studentsQuery.eq('institution_id', institutionId);
-        attendanceQuery = attendanceQuery.eq('institution_id', institutionId);
+      if (profile.institution_id) {
+        studentsQuery = studentsQuery.eq('institution_id', profile.institution_id);
+        attendanceQuery = attendanceQuery.eq('institution_id', profile.institution_id);
       } else if (profile.role !== 'super_admin') {
         // Security: If a user has no institution assigned yet, DO NOT fetch all students.
         setStudents([]);
@@ -218,6 +210,7 @@ export default function App() {
     setIsLoggedIn(false);
     setProfile(null);
     setProfileError(null);
+    setStudents([]);
   };
 
   // Auto-logout due to inactivity
@@ -356,7 +349,7 @@ export default function App() {
 
   return (
     <SyncProvider>
-      <InstitutionProvider profileId={profile.id}>
+      <InstitutionProvider institutionId={profile.institution_id}>
         <Router>
           <div className="min-h-screen bg-transparent flex flex-col">
             <Navbar onLogout={handleLogout} profile={profile} />

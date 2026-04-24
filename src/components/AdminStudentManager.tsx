@@ -6,6 +6,10 @@ import { DIVISIONS, type DivisionId } from '../constants';
 import { cn, getCorrectBatchesForDivision } from '../utils/attendance';
 import { writeAdminLog } from '../utils/admin';
 
+interface AdminStudentManagerProps {
+  onStudentsChanged: () => Promise<void>;
+}
+
 interface Student {
   id: string;
   name: string;
@@ -28,7 +32,7 @@ function getDivisionFromRollNo(rollNo: string): DivisionId {
   return 'A';
 }
 
-export default function AdminStudentManager() {
+export default function AdminStudentManager({ onStudentsChanged }: AdminStudentManagerProps) {
   const { institutionId, scopeQuery } = useInstitution();
   const [students, setStudents] = useState<Student[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -65,6 +69,13 @@ export default function AdminStudentManager() {
     return user?.id ?? null;
   };
 
+  const requireInstitutionId = () => {
+    if (!institutionId) {
+      throw new Error('Institution context is required to manage students.');
+    }
+    return institutionId;
+  };
+
   const openEditModal = (student: Student) => {
     setEditingStudent(student);
     setName(student.name);
@@ -89,12 +100,17 @@ export default function AdminStudentManager() {
     setFormLoading(true);
     setMessage(null);
     try {
+      const activeInstitutionId = requireInstitutionId();
       const division = getDivisionFromRollNo(rollNo);
-      const payload = { name, roll_no: rollNo, division, batch: batch || null, institution_id: institutionId };
+      const payload = { name, roll_no: rollNo, division, batch: batch || null, institution_id: activeInstitutionId };
       
       let error;
       if (editingStudent) {
-        const { error: updateError } = await supabase.from('students').update(payload).eq('id', editingStudent.id);
+        const { error: updateError } = await supabase
+          .from('students')
+          .update(payload)
+          .eq('id', editingStudent.id)
+          .eq('institution_id', activeInstitutionId);
         error = updateError;
       } else {
         const { error: insertError } = await supabase.from('students').insert([payload]);
@@ -110,12 +126,12 @@ export default function AdminStudentManager() {
           'student',
           editingStudent ? 'Updated student' : 'Added student',
           `${name} (${rollNo}) → Division ${division}${batch ? `, Batch ${batch}` : ''}`,
-          institutionId,
+          activeInstitutionId,
         );
       }
 
       closeModals();
-      fetchStudents();
+      await Promise.all([fetchStudents(), onStudentsChanged()]);
     } catch (err: any) {
       setMessage({ type: 'error', text: err.message || 'Failed to save student.' });
     } finally {
@@ -128,6 +144,7 @@ export default function AdminStudentManager() {
     setFormLoading(true);
     setMessage(null);
     try {
+      const activeInstitutionId = requireInstitutionId();
       let lines = bulkText.split('\n').map((l) => l.trim()).filter((l) => l.length > 0);
       if (lines.length > 0 && lines[0].toLowerCase().includes('name') && lines[0].toLowerCase().includes('roll')) {
         lines = lines.slice(1);
@@ -137,19 +154,21 @@ export default function AdminStudentManager() {
         if (parts.length < 2) throw new Error(`Invalid format on line ${index + 1}. Expected: Name, RollNo, Batch`);
         const [n, r, b] = parts;
         const d = getDivisionFromRollNo(r);
-        return { name: n, roll_no: r, division: d, batch: b || null, institution_id: institutionId };
+        return { name: n, roll_no: r, division: d, batch: b || null, institution_id: activeInstitutionId };
       });
 
-      const { error } = await supabase.from('students').upsert(studentsToInsert, { onConflict: 'roll_no' });
+      const { error } = await supabase
+        .from('students')
+        .upsert(studentsToInsert, { onConflict: 'institution_id,roll_no' });
       if (error) throw error;
 
       const actorId = await getCurrentUserId();
       if (actorId) {
-        await writeAdminLog(actorId, 'student', 'Bulk added students', `${studentsToInsert.length} students uploaded`, institutionId);
+        await writeAdminLog(actorId, 'student', 'Bulk added students', `${studentsToInsert.length} students uploaded`, activeInstitutionId);
       }
 
       closeModals();
-      fetchStudents();
+      await Promise.all([fetchStudents(), onStudentsChanged()]);
     } catch (err: any) {
       setMessage({ type: 'error', text: err.message || 'Failed to bulk upload.' });
     } finally {
@@ -160,14 +179,19 @@ export default function AdminStudentManager() {
   const handleDelete = async (student: Student) => {
     if (!window.confirm(`Are you sure you want to delete ${student.name}?`)) return;
     try {
-      const { error } = await supabase.from('students').delete().eq('id', student.id);
+      const activeInstitutionId = requireInstitutionId();
+      const { error } = await supabase
+        .from('students')
+        .delete()
+        .eq('id', student.id)
+        .eq('institution_id', activeInstitutionId);
       if (error) throw error;
 
       const actorId = await getCurrentUserId();
       if (actorId) {
-        await writeAdminLog(actorId, 'student', 'Deleted student', `${student.name} (${student.roll_no}) removed`, institutionId);
+        await writeAdminLog(actorId, 'student', 'Deleted student', `${student.name} (${student.roll_no}) removed`, activeInstitutionId);
       }
-      fetchStudents();
+      await Promise.all([fetchStudents(), onStudentsChanged()]);
     } catch (err: any) {
       alert(err.message || 'Failed to delete student.');
     }

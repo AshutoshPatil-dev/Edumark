@@ -94,7 +94,7 @@ export default function LeaveRequestsPage({ profile, studentId }: LeaveRequestsP
     const { data } = await query;
     setRequests((data as LeaveRequest[]) ?? []);
     setIsLoading(false);
-  }, [statusFilter, isStudentView, studentId]);
+  }, [isStudentView, scopeQuery, statusFilter, studentId]);
 
   useEffect(() => {
     fetchRequests();
@@ -103,7 +103,7 @@ export default function LeaveRequestsPage({ profile, studentId }: LeaveRequestsP
   const handleAction = async (requestId: string, action: 'approved' | 'rejected') => {
     setActionLoading(requestId);
 
-    const { error } = await supabase
+    let query = supabase
       .from('leave_requests')
       .update({
         status: action,
@@ -112,6 +112,12 @@ export default function LeaveRequestsPage({ profile, studentId }: LeaveRequestsP
         updated_at: new Date().toISOString(),
       })
       .eq('id', requestId);
+
+    if (institutionId) {
+      query = query.eq('institution_id', institutionId);
+    }
+
+    const { error } = await query;
 
     if (!error) {
       const request = requests.find(r => r.id === requestId);

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { AlertCircle, CheckCircle2, XCircle, Clock, ChevronDown, ChevronUp, ClipboardCheck } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
@@ -20,6 +20,32 @@ interface MissingEntry {
   batch?: string;
 }
 
+interface ParsedLog {
+  date: string;
+  subject_id: string;
+  division: string;
+  batch?: string;
+  lecture_no?: string;
+  action: string;
+}
+
+function parseAttendanceLog(details: string): ParsedLog {
+  const normalizedParts = details.split(/ · | Â· /);
+  const dateStr = normalizedParts.find((part) => /^\d{4}-\d{2}-\d{2}$/.test(part)) || '';
+  const divPart = normalizedParts.find((part) => part.startsWith('Div '));
+  const batchPart = normalizedParts.find((part) => part.startsWith('Batch '));
+  const lecPart = normalizedParts.find((part) => part.startsWith('Lecture '));
+
+  return {
+    date: dateStr,
+    subject_id: normalizedParts[0] || '',
+    division: divPart ? divPart.replace('Div ', '') : '',
+    batch: batchPart ? batchPart.replace('Batch ', '') : undefined,
+    lecture_no: lecPart ? lecPart.replace('Lecture ', '') : undefined,
+    action: '',
+  };
+}
+
 export default function MissingAttendanceAlert({ students, profile, refreshData }: MissingAttendanceAlertProps) {
   const navigate = useNavigate();
   const { institutionId, scopeQuery } = useInstitution();
@@ -29,53 +55,48 @@ export default function MissingAttendanceAlert({ students, profile, refreshData 
   const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
-    if (profile.role !== 'faculty' && profile.role !== 'admin') return;
+    if (profile.role !== 'faculty' && profile.role !== 'admin') {
+      return;
+    }
 
     const calculateMissing = async () => {
-      const { data: timetableData } = await scopeQuery(supabase
-        .from('timetable')
-        .select('*'))
+      const { data: timetableData } = await scopeQuery(
+        supabase
+          .from('timetable')
+          .select('*')
+      )
         .eq('faculty_id', profile.id);
 
-      if (!timetableData || timetableData.length === 0) return;
+      if (!timetableData || timetableData.length === 0) {
+        setMissingList([]);
+        return;
+      }
 
-      const { data: logsData } = await scopeQuery(supabase
-        .from('admin_logs')
-        .select('*'))
+      const { data: logsData } = await scopeQuery(
+        supabase
+          .from('admin_logs')
+          .select('*')
+      )
         .eq('actor_id', profile.id)
         .eq('category', 'attendance');
 
-      // Parse details field to reconstruct comparable log info
-      interface ParsedLog { date: string; subject_id: string; division: string; batch?: string; lecture_no?: string; action: string; }
-      const logs: ParsedLog[] = (logsData || []).map((r: any) => {
-        // Details format: "SUBJ · Div X · Batch Y · L2 · 2026-04-19"
-        const parts = (r.details || '').split(' · ');
-        const dateStr = parts.find((p: string) => /^\d{4}-\d{2}-\d{2}$/.test(p)) || '';
-        const divPart = parts.find((p: string) => p.startsWith('Div '));
-        const batchPart = parts.find((p: string) => p.startsWith('Batch '));
-        const lecPart = parts.find((p: string) => p.startsWith('Lecture '));
-        return {
-          date: dateStr,
-          subject_id: parts[0] || '',
-          division: divPart ? divPart.replace('Div ', '') : '',
-          batch: batchPart ? batchPart.replace('Batch ', '') : undefined,
-          lecture_no: lecPart ? lecPart.replace('Lecture ', '') : undefined,
-          action: r.action || '',
-        };
-      });
+      const logs: ParsedLog[] = (logsData || []).map((record: any) => ({
+        ...parseAttendanceLog(record.details || ''),
+        action: record.action || '',
+      }));
       const timetable = timetableData as TimetableEntry[];
 
-      const pastDays: { date: string, dayOfWeek: number }[] = [];
-      const d = new Date();
-      d.setHours(0, 0, 0, 0);
+      const pastDays: { date: string; dayOfWeek: number }[] = [];
+      const cursor = new Date();
+      cursor.setHours(0, 0, 0, 0);
 
       while (pastDays.length < 5) {
-        d.setDate(d.getDate() - 1);
-        const dayOfWeek = d.getDay();
+        cursor.setDate(cursor.getDate() - 1);
+        const dayOfWeek = cursor.getDay();
         if (dayOfWeek !== 0 && dayOfWeek !== 6) {
-          const year = d.getFullYear();
-          const month = String(d.getMonth() + 1).padStart(2, '0');
-          const day = String(d.getDate()).padStart(2, '0');
+          const year = cursor.getFullYear();
+          const month = String(cursor.getMonth() + 1).padStart(2, '0');
+          const day = String(cursor.getDate()).padStart(2, '0');
           pastDays.push({ date: `${year}-${month}-${day}`, dayOfWeek });
         }
       }
@@ -83,77 +104,99 @@ export default function MissingAttendanceAlert({ students, profile, refreshData 
       const ignored = JSON.parse(localStorage.getItem(`edumark_ignored_attendance_${profile.id}`) || '[]');
       const missing: MissingEntry[] = [];
 
-      pastDays.forEach(day => {
-        const dayTimetable = timetable.filter(t => {
-          if (t.day_of_week !== day.dayOfWeek) return false;
-          if (profile.role !== 'admin' && !(profile.assigned_subjects || []).includes(t.subject_id)) return false;
+      for (const day of pastDays) {
+        const dayTimetable = timetable.filter((entry) => {
+          if (entry.day_of_week !== day.dayOfWeek) {
+            return false;
+          }
+          if (profile.role !== 'admin' && !(profile.assigned_subjects || []).includes(entry.subject_id)) {
+            return false;
+          }
           return true;
         });
 
-        const processedTimetable: typeof dayTimetable = [];
-
-        const sortedTimetable = [...dayTimetable].sort((a, b) => {
-          if (a.subject_id !== b.subject_id) return a.subject_id.localeCompare(b.subject_id);
-          if (a.division !== b.division) return a.division.localeCompare(b.division);
-          const batchA = a.batch || '';
-          const batchB = b.batch || '';
-          if (batchA !== batchB) return batchA.localeCompare(batchB);
-          return a.lecture_no - b.lecture_no;
-        });
-
-        sortedTimetable.forEach(t => {
-          const isPractical = t.subject_id.endsWith('L') || t.subject_id === 'PBL';
-          if (isPractical) {
-            const prev = processedTimetable[processedTimetable.length - 1];
-            if (prev &&
-                prev.subject_id === t.subject_id &&
-                prev.division === t.division &&
-                prev.batch === t.batch &&
-                prev.lecture_no === t.lecture_no - 1) {
-              return;
-            }
-            processedTimetable.push(t);
-          } else {
-            processedTimetable.push(t);
+        const processedTimetable: TimetableEntry[] = [];
+        const sortedTimetable = [...dayTimetable].sort((left, right) => {
+          if (left.subject_id !== right.subject_id) {
+            return left.subject_id.localeCompare(right.subject_id);
           }
+          if (left.division !== right.division) {
+            return left.division.localeCompare(right.division);
+          }
+          const leftBatch = left.batch || '';
+          const rightBatch = right.batch || '';
+          if (leftBatch !== rightBatch) {
+            return leftBatch.localeCompare(rightBatch);
+          }
+          return left.lecture_no - right.lecture_no;
         });
 
-        processedTimetable.forEach(t => {
-          const key = `${day.date}_${t.subject_id}_${t.division}_${t.lecture_no}_${t.batch || ''}`;
-          if (ignored.includes(key)) return;
+        sortedTimetable.forEach((entry) => {
+          const isPractical = entry.subject_id.endsWith('L') || entry.subject_id === 'PBL';
+          if (!isPractical) {
+            processedTimetable.push(entry);
+            return;
+          }
 
-          const isLogged = logs.some(l =>
-            l.date === day.date &&
-            l.subject_id === t.subject_id &&
-            l.division === t.division &&
-            (l.batch === t.batch || (!l.batch && !t.batch))
+          const previousEntry = processedTimetable[processedTimetable.length - 1];
+          if (
+            previousEntry &&
+            previousEntry.subject_id === entry.subject_id &&
+            previousEntry.division === entry.division &&
+            previousEntry.batch === entry.batch &&
+            previousEntry.lecture_no === entry.lecture_no - 1
+          ) {
+            return;
+          }
+
+          processedTimetable.push(entry);
+        });
+
+        processedTimetable.forEach((entry) => {
+          const key = `${day.date}_${entry.subject_id}_${entry.division}_${entry.lecture_no}_${entry.batch || ''}`;
+          if (ignored.includes(key)) {
+            return;
+          }
+
+          const isLogged = logs.some((log) =>
+            log.date === day.date &&
+            log.subject_id === entry.subject_id &&
+            log.division === entry.division &&
+            (log.batch === entry.batch || (!log.batch && !entry.batch)) &&
+            log.lecture_no === String(entry.lecture_no)
           );
 
-          if (isLogged) return;
+          if (isLogged) {
+            return;
+          }
 
-          const studentsInDiv = students.filter(s => s.division === t.division && (!t.batch || s.batch === t.batch));
-          const hasAttendance = studentsInDiv.some(s =>
-            s.attendance[t.subject_id]?.some(a => a.date === day.date && a.lectureNo === t.lecture_no)
+          const studentsInSlot = students.filter(
+            (student) => student.division === entry.division && (!entry.batch || student.batch === entry.batch),
+          );
+          const hasAttendance = studentsInSlot.some((student) =>
+            student.attendance[entry.subject_id]?.some(
+              (attendance) => attendance.date === day.date && attendance.lectureNo === entry.lecture_no,
+            ),
           );
 
-          if (!hasAttendance && studentsInDiv.length > 0) {
+          if (!hasAttendance && studentsInSlot.length > 0) {
             missing.push({
               date: day.date,
-              subjectId: t.subject_id,
-              division: t.division,
-              lectureNo: t.lecture_no,
-              batch: t.batch
+              subjectId: entry.subject_id,
+              division: entry.division,
+              lectureNo: entry.lecture_no,
+              batch: entry.batch,
             });
           }
         });
-      });
+      }
 
-      missing.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+      missing.sort((left, right) => new Date(right.date).getTime() - new Date(left.date).getTime());
       setMissingList(missing);
     };
 
     calculateMissing();
-  }, [students, profile]);
+  }, [profile, scopeQuery, students]);
 
   const handleIgnore = (entry: MissingEntry) => {
     const key = `${entry.date}_${entry.subjectId}_${entry.division}_${entry.lectureNo}_${entry.batch || ''}`;
@@ -161,7 +204,18 @@ export default function MissingAttendanceAlert({ students, profile, refreshData 
     ignored.push(key);
     localStorage.setItem(`edumark_ignored_attendance_${profile.id}`, JSON.stringify(ignored));
 
-    setMissingList(prev => prev.filter(m => !(m.date === entry.date && m.subjectId === entry.subjectId && m.division === entry.division && m.lectureNo === entry.lectureNo && m.batch === entry.batch)));
+    setMissingList((prev) =>
+      prev.filter(
+        (item) =>
+          !(
+            item.date === entry.date &&
+            item.subjectId === entry.subjectId &&
+            item.division === entry.division &&
+            item.lectureNo === entry.lectureNo &&
+            item.batch === entry.batch
+          ),
+      ),
+    );
   };
 
   const handleLogAction = async (entry: MissingEntry, action: string) => {
@@ -172,23 +226,38 @@ export default function MissingAttendanceAlert({ students, profile, refreshData 
       entry.batch ? `Batch ${entry.batch}` : null,
       `Lecture ${entry.lectureNo}`,
       entry.date,
-    ].filter(Boolean).join(' · ');
+    ]
+      .filter(Boolean)
+      .join(' · ');
 
     try {
       const { error } = await supabase.from('admin_logs').insert({
         actor_id: profile.id,
         category: 'attendance',
-        action: action,
-        details: details,
+        action,
+        details,
         institution_id: institutionId,
       });
 
-      if (error) throw error;
+      if (error) {
+        throw error;
+      }
 
-      setMissingList(prev => prev.filter(m => !(m.date === entry.date && m.subjectId === entry.subjectId && m.division === entry.division && m.lectureNo === entry.lectureNo && m.batch === entry.batch)));
-    } catch (err: any) {
-      console.error('Error logging action:', err);
-      alert('Failed to log action: ' + err.message);
+      setMissingList((prev) =>
+        prev.filter(
+          (item) =>
+            !(
+              item.date === entry.date &&
+              item.subjectId === entry.subjectId &&
+              item.division === entry.division &&
+              item.lectureNo === entry.lectureNo &&
+              item.batch === entry.batch
+            ),
+        ),
+      );
+    } catch (error: any) {
+      console.error('Error logging action:', error);
+      alert('Failed to log action: ' + error.message);
     } finally {
       setIsLoading(false);
     }
@@ -196,54 +265,49 @@ export default function MissingAttendanceAlert({ students, profile, refreshData 
 
   const handleMarkAllPresent = async (entry: MissingEntry) => {
     setIsLoading(true);
+
     try {
-      const studentsInDiv = students.filter(s => s.division === entry.division && (!entry.batch || s.batch === entry.batch));
-      const records = studentsInDiv.map(student => ({
+      const studentsInSlot = students.filter(
+        (student) => student.division === entry.division && (!entry.batch || student.batch === entry.batch),
+      );
+      const records = studentsInSlot.map((student) => ({
         student_id: student.id,
         subject: entry.subjectId,
         date: entry.date,
         lecture_no: entry.lectureNo,
         status: 1,
         marked_by: profile.id,
-        institution_id: institutionId
+        institution_id: institutionId,
       }));
 
       if (!isOnline) {
         await addToQueue('attendance', records);
-        const key = `${entry.date}_${entry.subjectId}_${entry.division}_${entry.lectureNo}_${entry.batch || ''}`;
-        const ignored = JSON.parse(localStorage.getItem(`edumark_ignored_attendance_${profile.id}`) || '[]');
-        if (!ignored.includes(key)) {
-          ignored.push(key);
-          localStorage.setItem(`edumark_ignored_attendance_${profile.id}`, JSON.stringify(ignored));
-        }
-        setMissingList(prev => prev.filter(m => !(m.date === entry.date && m.subjectId === entry.subjectId && m.division === entry.division && m.lectureNo === entry.lectureNo && m.batch === entry.batch)));
+        handleIgnore(entry);
         setIsLoading(false);
         return;
       }
 
       const { error } = await supabase.from('attendance').upsert(records, {
-        onConflict: 'student_id, subject, date, lecture_no'
+        onConflict: 'student_id, subject, date, lecture_no',
       });
 
-      if (error) throw error;
-
-      const key = `${entry.date}_${entry.subjectId}_${entry.division}_${entry.lectureNo}_${entry.batch || ''}`;
-      const ignored = JSON.parse(localStorage.getItem(`edumark_ignored_attendance_${profile.id}`) || '[]');
-      if (!ignored.includes(key)) {
-        ignored.push(key);
-        localStorage.setItem(`edumark_ignored_attendance_${profile.id}`, JSON.stringify(ignored));
+      if (error) {
+        throw error;
       }
 
+      handleIgnore(entry);
       await refreshData();
-    } catch (err: any) {
-      console.error('Error marking all present:', err);
-      alert('Failed to mark attendance: ' + err.message);
+    } catch (error: any) {
+      console.error('Error marking all present:', error);
+      alert('Failed to mark attendance: ' + error.message);
     } finally {
       setIsLoading(false);
     }
   };
 
-  if (missingList.length === 0) return null;
+  if (missingList.length === 0) {
+    return null;
+  }
 
   return (
     <div className="bg-card border border-cream-border rounded-3xl p-5 md:p-6 mb-8 relative overflow-hidden">
@@ -273,22 +337,37 @@ export default function MissingAttendanceAlert({ students, profile, refreshData 
 
       {expanded && (
         <div className="mt-5 space-y-2">
-          {missingList.map(m => {
-            const [y, month, d] = m.date.split('-');
-            const dateObj = new Date(parseInt(y), parseInt(month) - 1, parseInt(d));
-            const formattedDate = dateObj.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+          {missingList.map((entry) => {
+            const [year, month, day] = entry.date.split('-');
+            const dateObj = new Date(parseInt(year, 10), parseInt(month, 10) - 1, parseInt(day, 10));
+            const formattedDate = dateObj.toLocaleDateString('en-US', {
+              weekday: 'short',
+              month: 'short',
+              day: 'numeric',
+            });
 
             return (
-              <div key={`${m.date}_${m.subjectId}_${m.division}_${m.lectureNo}_${m.batch || ''}`} className="flex flex-col sm:flex-row sm:items-center justify-between bg-paper p-4 rounded-2xl border border-cream-border gap-3">
+              <div
+                key={`${entry.date}_${entry.subjectId}_${entry.division}_${entry.lectureNo}_${entry.batch || ''}`}
+                className="flex flex-col sm:flex-row sm:items-center justify-between bg-paper p-4 rounded-2xl border border-cream-border gap-3"
+              >
                 <div className="flex items-center gap-3">
                   <span className="w-1.5 h-1.5 rounded-full bg-ochre shrink-0" />
                   <div>
                     <span className="font-semibold text-ink">{formattedDate}</span>
                     <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
-                      <span className="text-ink text-[0.6875rem] font-semibold px-2 py-0.5 bg-cream border border-cream-border rounded">{m.subjectId}</span>
-                      <span className="text-ink text-[0.6875rem] font-semibold px-2 py-0.5 bg-ochre/10 border border-ochre/30 rounded">Div {m.division}</span>
-                      {m.batch && <span className="text-ochre-deep text-[0.6875rem] font-semibold px-2 py-0.5 bg-ochre/10 border border-ochre/30 rounded">Batch {m.batch}</span>}
-                      <span className="text-ink-muted text-[0.6875rem] font-medium">Lecture {m.lectureNo}</span>
+                      <span className="text-ink text-[0.6875rem] font-semibold px-2 py-0.5 bg-cream border border-cream-border rounded">
+                        {entry.subjectId}
+                      </span>
+                      <span className="text-ink text-[0.6875rem] font-semibold px-2 py-0.5 bg-ochre/10 border border-ochre/30 rounded">
+                        Div {entry.division}
+                      </span>
+                      {entry.batch && (
+                        <span className="text-ochre-deep text-[0.6875rem] font-semibold px-2 py-0.5 bg-ochre/10 border border-ochre/30 rounded">
+                          Batch {entry.batch}
+                        </span>
+                      )}
+                      <span className="text-ink-muted text-[0.6875rem] font-medium">Lecture {entry.lectureNo}</span>
                     </div>
                   </div>
                 </div>
@@ -296,12 +375,14 @@ export default function MissingAttendanceAlert({ students, profile, refreshData 
                   <button
                     onClick={() => {
                       const params = new URLSearchParams({
-                        subject: m.subjectId,
-                        division: m.division,
-                        date: m.date,
-                        lecture: String(m.lectureNo),
+                        subject: entry.subjectId,
+                        division: entry.division,
+                        date: entry.date,
+                        lecture: String(entry.lectureNo),
                       });
-                      if (m.batch) params.set('batch', m.batch);
+                      if (entry.batch) {
+                        params.set('batch', entry.batch);
+                      }
                       navigate(`/attendance?${params.toString()}`);
                     }}
                     className="flex items-center gap-1.5 text-[0.8125rem] bg-night text-white border border-night px-3.5 py-2 rounded-xl hover:bg-night-soft font-semibold"
@@ -310,7 +391,7 @@ export default function MissingAttendanceAlert({ students, profile, refreshData 
                     <span>Mark now</span>
                   </button>
                   <button
-                    onClick={() => handleMarkAllPresent(m)}
+                    onClick={() => handleMarkAllPresent(entry)}
                     disabled={isLoading}
                     className="flex items-center gap-1.5 text-[0.8125rem] bg-ochre text-white border border-ochre px-3.5 py-2 rounded-xl hover:bg-ochre-deep font-semibold disabled:opacity-50"
                   >
@@ -318,7 +399,7 @@ export default function MissingAttendanceAlert({ students, profile, refreshData 
                     <span>All present</span>
                   </button>
                   <button
-                    onClick={() => handleLogAction(m, 'Holiday / No Lecture')}
+                    onClick={() => handleLogAction(entry, 'Holiday / No Lecture')}
                     disabled={isLoading}
                     className="flex items-center gap-1.5 text-[0.8125rem] bg-card text-ink border border-cream-border px-3.5 py-2 rounded-xl hover:border-ochre/40 font-semibold disabled:opacity-50"
                   >
@@ -326,7 +407,7 @@ export default function MissingAttendanceAlert({ students, profile, refreshData 
                     <span>Holiday</span>
                   </button>
                   <button
-                    onClick={() => handleIgnore(m)}
+                    onClick={() => handleIgnore(entry)}
                     disabled={isLoading}
                     className="flex items-center gap-1.5 text-[0.8125rem] bg-card text-ink-muted border border-cream-border px-3.5 py-2 rounded-xl hover:text-ink font-semibold disabled:opacity-50"
                   >

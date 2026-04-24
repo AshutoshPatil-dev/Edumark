@@ -2,6 +2,7 @@ import { useState, useMemo, useEffect } from 'react';
 import { Student } from '../types';
 import { Filter, Calendar, Clock, User, CheckCircle2, XCircle } from 'lucide-react';
 import { supabase } from '../lib/supabase';
+import { useInstitution } from '../context/InstitutionContext';
 import { cn } from '../utils/attendance';
 
 interface AttendanceLogsProps {
@@ -23,13 +24,14 @@ interface LogEntry {
 }
 
 export function AttendanceLogs({ students, studentId, className, compact = false }: AttendanceLogsProps) {
+  const { scopeQuery } = useInstitution();
   const [filterStatus, setFilterStatus] = useState<'all' | 'present' | 'absent'>('all');
   const [filterSubject, setFilterSubject] = useState<string>('all');
   const [profiles, setProfiles] = useState<Record<string, string>>({});
 
   useEffect(() => {
     const fetchProfiles = async () => {
-      const { data } = await supabase.from('profiles').select('id, full_name');
+      const { data } = await scopeQuery(supabase.from('profiles').select('id, full_name'));
       if (data) {
         const profileMap: Record<string, string> = {};
         data.forEach(p => {
@@ -39,7 +41,7 @@ export function AttendanceLogs({ students, studentId, className, compact = false
       }
     };
     fetchProfiles();
-  }, []);
+  }, [scopeQuery]);
 
   const logs = useMemo(() => {
     const allLogs: LogEntry[] = [];

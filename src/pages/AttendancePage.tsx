@@ -26,6 +26,7 @@ import { supabase } from '../lib/supabase';
 import { useSearchParams } from 'react-router-dom';
 import { useInstitution } from '../context/InstitutionContext';
 import { useSync } from '../context/SyncContext';
+import { writeAdminLog } from '../utils/admin';
 
 interface AttendancePageProps {
   students: Student[];
@@ -185,6 +186,15 @@ export default function AttendancePage({
     ),
     [students, selectedDivision, selectedBatch, searchQuery]
   );
+  const scopedStudents = useMemo(
+    () =>
+      students.filter(
+        (student) =>
+          student.division === selectedDivision &&
+          (!selectedBatch || student.batch === selectedBatch),
+      ),
+    [students, selectedDivision, selectedBatch],
+  );
 
   const handleQuickEntry = (mode: 'absent' | 'present') => {
     setQuickEntryError(null);
@@ -314,9 +324,9 @@ export default function AttendancePage({
       const d = new Date(date);
       const dayOfWeek = d.getDay();
 
-      let query = supabase
+      let query = scopeQuery(supabase
         .from('timetable')
-        .select('batch')
+        .select('batch'))
         .eq('day_of_week', dayOfWeek)
         .eq('subject_id', selectedSubject)
         .eq('division', selectedDivision)
@@ -331,8 +341,8 @@ export default function AttendancePage({
       if (!error && data && data.length > 0) {
         const allowedBatches = new Set(getCorrectBatchesForDivision(selectedDivision));
         
-        const uniqueBatches = Array.from(new Set(data.map((d) => d.batch as string)))
-          .filter(b => allowedBatches.has(b))
+        const uniqueBatches: string[] = Array.from(new Set<string>(data.map((entry) => String(entry.batch))))
+          .filter((batch): batch is string => batch !== 'null' && batch !== 'undefined' && allowedBatches.has(batch))
           .sort();
 
         setValidBatches(uniqueBatches);
@@ -355,9 +365,9 @@ export default function AttendancePage({
       const d = new Date(date);
       const dayOfWeek = d.getDay();
 
-      let query = supabase
+      let query = scopeQuery(supabase
         .from('timetable')
-        .select('lecture_no')
+        .select('lecture_no'))
         .eq('day_of_week', dayOfWeek)
         .eq('subject_id', selectedSubject)
         .eq('division', selectedDivision);
@@ -375,7 +385,7 @@ export default function AttendancePage({
       const { data, error } = await query;
 
       if (!error && data && data.length > 0) {
-        let uniqueLectures = Array.from(new Set(data.map((d) => d.lecture_no))).sort(
+        let uniqueLectures: number[] = Array.from(new Set<number>(data.map((entry) => Number(entry.lecture_no)))).sort(
           (a, b) => a - b,
         );
 
@@ -404,12 +414,26 @@ export default function AttendancePage({
   useEffect(() => {
     const fetchExistingAttendance = async () => {
       setIsLoadingAttendance(true);
-      const { data, error } = await supabase
-        .from('attendance')
-        .select('student_id, status, remark')
+      const scopedStudentIds = scopedStudents.map((student) => student.id);
+
+      if (scopedStudentIds.length === 0) {
+        setAbsenteeIds(new Set());
+        setInitialAbsenteeIds(new Set());
+        setRemarks({});
+        setInitialRemarks({});
+        setIsLoadingAttendance(false);
+        return;
+      }
+
+      const { data, error } = await scopeQuery(
+        supabase
+          .from('attendance')
+          .select('student_id, status, remark')
+      )
         .eq('date', date)
         .eq('subject', selectedSubject)
-        .eq('lecture_no', lectureNo);
+        .eq('lecture_no', lectureNo)
+        .in('student_id', scopedStudentIds);
 
       if (!error && data) {
         const absentees = new Set<string>();
@@ -434,7 +458,7 @@ export default function AttendancePage({
     };
 
     fetchExistingAttendance();
-  }, [date, selectedSubject, lectureNo]);
+  }, [date, lectureNo, scopedStudents, scopeQuery, selectedSubject]);
 
   const toggleAbsentee = (id: string) => {
     const newAbsentees = new Set(absenteeIds);
@@ -458,11 +482,7 @@ export default function AttendancePage({
   const handleSave = async () => {
     setIsSaving(true);
 
-    const studentsToSave = students.filter(
-      (s) =>
-        s.division === selectedDivision &&
-        (!selectedBatch || s.batch === selectedBatch),
-    );
+    const studentsToSave = scopedStudents;
 
     const recordsToUpsert = studentsToSave.map((student) => {
       const isAbsent = absenteeIds.has(student.id);
@@ -503,6 +523,7 @@ export default function AttendancePage({
         actor_id: profile.id,
         category: 'attendance',
         action: 'Marked attendance',
+        institution_id: institutionId,
         details: `${selectedSubject} · Div ${selectedDivision}${selectedBatch ? ` Batch ${selectedBatch}` : ''} · Lecture ${lectureNo} · ${date} · ${absenteeIds.size} absent`,
       });
       await refreshData();
