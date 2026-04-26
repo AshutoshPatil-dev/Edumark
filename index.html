@@ -28,12 +28,15 @@
     <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)" />
     <link rel="manifest" href="/manifest.json" />
     <link rel="icon" type="image/png" href="/pwa-192.png" />
+    <link rel="shortcut icon" type="image/png" href="/pwa-192.png" />
     <link rel="apple-touch-icon" href="/pwa-192.png" />
     <title>EduMark — Comprehensive School ERP & Attendance System</title>
     <link rel="canonical" href="https://edumark.pages.dev/" />
     <meta name="description" content="EduMark: The comprehensive school ERP & attendance management system. Track student attendance, manage faculty timetables, and export detailed reports." />
     <meta name="keywords" content="edumark, attendance management, school erp, student tracking system, college attendance software, faculty timetable manager, education ERP, attendance reports" />
     <meta name="author" content="EduMark Team" />
+    <meta name="application-name" content="EduMark" />
+    <meta name="apple-mobile-web-app-title" content="EduMark" />
     <meta name="robots" content="index, follow" />
     <meta name="google-site-verification" content="d8lWKIOh-z6HalafVVXPscF6Dlt-YnkKVs_Lkq2djRk" />
 
@@ -85,8 +88,37 @@
             "@id": "https://edumark.pages.dev/#website",
             "url": "https://edumark.pages.dev/",
             "name": "EduMark",
-            "alternateName": "EduMark ERP",
-            "description": "Smart Attendance Management & Student Tracking ERP for modern educational institutions."
+            "alternateName": ["EduMark ERP", "EduMark Attendance"],
+            "description": "Smart Attendance Management & Student Tracking ERP for modern educational institutions.",
+            "publisher": {
+              "@id": "https://edumark.pages.dev/#organization"
+            },
+            "inLanguage": "en-US"
+          },
+          {
+            "@type": "Organization",
+            "@id": "https://edumark.pages.dev/#organization",
+            "name": "EduMark",
+            "url": "https://edumark.pages.dev/",
+            "logo": {
+              "@type": "ImageObject",
+              "url": "https://edumark.pages.dev/pwa-512.png",
+              "width": 512,
+              "height": 512
+            },
+            "sameAs": []
+          },
+          {
+            "@type": "BreadcrumbList",
+            "@id": "https://edumark.pages.dev/#breadcrumb",
+            "itemListElement": [
+              {
+                "@type": "ListItem",
+                "position": 1,
+                "name": "EduMark",
+                "item": "https://edumark.pages.dev/"
+              }
+            ]
           },
           {
             "@type": "SoftwareApplication",
@@ -99,11 +131,6 @@
             "author": {
               "@type": "Person",
               "name": "Ashutosh Patil"
-            },
-            "offers": {
-              "@type": "Offer",
-              "price": "0",
-              "priceCurrency": "USD"
             }
           }
         ]
