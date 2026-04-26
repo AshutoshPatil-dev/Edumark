@@ -17,7 +17,10 @@ import {
   X,
   ChevronDown,
   MessageSquare,
+  Sparkles,
+  Bot,
 } from 'lucide-react';
+import { parseAttendanceMessage, type ParsedAttendance } from '../utils/aiService';
 import { SUBJECTS, DIVISIONS, type SubjectId, type DivisionId } from '../constants';
 import type { Student, Profile } from '../types';
 import { cn, getCorrectBatchesForDivision } from '../utils/attendance';
@@ -83,6 +86,10 @@ export default function AttendancePage({
 
   const [quickEntryInput, setQuickEntryInput] = useState('');
   const [quickEntryError, setQuickEntryError] = useState<string | null>(null);
+
+  const [showAIEntry, setShowAIEntry] = useState(false);
+  const [aiInput, setAiInput] = useState('');
+  const [isAiProcessing, setIsAiProcessing] = useState(false);
 
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [isSubjectDropdownOpen, setIsSubjectDropdownOpen] = useState(false);
@@ -238,6 +245,95 @@ export default function AttendancePage({
       setQuickEntryInput('');
       setShowQuickEntry(false);
       setQuickEntryError(null);
+    }
+  };
+
+  const handleAIEntry = async () => {
+    if (!aiInput.trim()) return;
+    setIsAiProcessing(true);
+    setQuickEntryError(null);
+
+    try {
+      const result = await parseAttendanceMessage(aiInput);
+
+      if (result.subject && availableSubjects.includes(result.subject)) {
+        setSelectedSubject(result.subject);
+      }
+      if (result.division && DIVISIONS.includes(result.division)) {
+        setSelectedDivision(result.division);
+      }
+
+      const matchedIds: string[] = [];
+      const unmatchedNumbers: number[] = [];
+
+      result.rollNumbers.forEach((num) => {
+        const student = students.find((s) => {
+          if (s.division !== (result.division || selectedDivision)) return false;
+          const match = s.rollNo.match(/\d+$/);
+          if (!match) return false;
+          const fullNum = parseInt(match[0], 10);
+          const lastTwoMatch = s.rollNo.match(/\d{1,2}$/);
+          const shortNum = lastTwoMatch ? parseInt(lastTwoMatch[0], 10) : -1;
+          return num === fullNum || num === shortNum;
+        });
+
+        if (student) matchedIds.push(student.id);
+        else unmatchedNumbers.push(num);
+      });
+
+      if (matchedIds.length > 0 || result.isException) {
+        setHasUnsavedChanges(true);
+        setAbsenteeIds((prev) => {
+          const next = new Set(prev);
+          const currentFilteredIds = filteredStudents.map(s => s.id);
+
+          if (result.isException) {
+            if (result.status === 'absent') {
+              // Everyone absent except rollNumbers
+              currentFilteredIds.forEach(id => {
+                next.add(id);
+                if (result.remark) handleRemarkChange(id, result.remark);
+              });
+              matchedIds.forEach(id => {
+                next.delete(id);
+                setRemarks(prev => {
+                  const n = { ...prev };
+                  delete n[id];
+                  return n;
+                });
+              });
+            } else {
+              // Everyone present except rollNumbers
+              currentFilteredIds.forEach(id => next.delete(id));
+              matchedIds.forEach(id => {
+                next.add(id);
+                if (result.remark) handleRemarkChange(id, result.remark);
+              });
+            }
+          } else {
+            if (result.status === 'absent') {
+              matchedIds.forEach((id) => {
+                next.add(id);
+                if (result.remark) handleRemarkChange(id, result.remark);
+              });
+            } else {
+              matchedIds.forEach((id) => next.delete(id));
+            }
+          }
+          return next;
+        });
+      }
+
+      if (unmatchedNumbers.length > 0) {
+        setQuickEntryError(`Roll numbers not found: ${unmatchedNumbers.join(', ')}`);
+      } else {
+        setShowAIEntry(false);
+        setAiInput('');
+      }
+    } catch (error) {
+      setQuickEntryError('Failed to process message. Try being more specific.');
+    } finally {
+      setIsAiProcessing(false);
     }
   };
 
@@ -756,6 +852,14 @@ export default function AttendancePage({
             <h2 className="font-sans text-lg font-semibold text-ink tracking-tight">Roster</h2>
             <div className="flex flex-wrap items-center gap-2.5">
               <button
+                onClick={() => setShowAIEntry(true)}
+                disabled={availableSubjects.length === 0}
+                className="px-3 py-1.5 bg-indigo-500/10 text-indigo-600 hover:bg-indigo-500/20 rounded-lg text-[0.75rem] font-bold tracking-wide transition-colors flex items-center gap-1.5 border border-transparent hover:border-indigo-500/30 shadow-sm disabled:opacity-50"
+              >
+                <Sparkles className="w-3.5 h-3.5" />
+                AI MARK
+              </button>
+              <button
                 onClick={() => setShowQuickEntry(true)}
                 disabled={availableSubjects.length === 0 || validDivisions.length === 0}
                 className="px-3 py-1.5 bg-ochre/10 text-ochre-deep hover:bg-ochre/20 rounded-lg text-[0.75rem] font-bold tracking-wide transition-colors flex items-center gap-1.5 border border-transparent hover:border-ochre/30 shadow-sm disabled:opacity-50 disabled:pointer-events-none"
@@ -1023,6 +1127,111 @@ export default function AttendancePage({
                     All absent
                   </button>
                 </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* AI Entry Modal */}
+      <AnimatePresence>
+        {showAIEntry && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="absolute inset-0 bg-ink/40 backdrop-blur-sm"
+              onClick={() => {
+                setShowAIEntry(false);
+                setQuickEntryError(null);
+              }}
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 10 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 10 }}
+              transition={{ duration: 0.2 }}
+              className="bg-card p-6 md:p-8 rounded-3xl border border-cream-border space-y-6 relative z-10 w-full max-w-lg shadow-2xl"
+            >
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-ink font-semibold flex items-center text-lg">
+                    <Sparkles className="w-5 h-5 mr-2 text-indigo-500" />
+                    AI Assistant Mark
+                  </h3>
+                  <p className="text-ink-muted text-sm mt-1">
+                    Mark attendance using natural language commands.
+                  </p>
+                </div>
+                <button
+                  onClick={() => {
+                    setShowAIEntry(false);
+                    setQuickEntryError(null);
+                  }}
+                  className="w-8 h-8 flex items-center justify-center rounded-full bg-cream hover:bg-cream-border text-ink-muted transition-colors"
+                >
+                  <X className="w-4 h-4" />
+                  <span className="sr-only">Close</span>
+                </button>
+              </div>
+
+              <div className="space-y-4">
+                <div className="bg-indigo-50/50 border border-indigo-100 p-4 rounded-xl space-y-2">
+                  <p className="text-[0.625rem] font-bold text-indigo-600 uppercase tracking-widest">Example Commands</p>
+                  <ul className="text-[0.8125rem] text-indigo-900/70 space-y-1 font-medium">
+                    <li>• "Roll 1 to 10 were absent for DEIC"</li>
+                    <li>• "Everyone present except 5, 12, 18 in Div C"</li>
+                    <li>• "Roll 1, 2, 4, 24 absent with note bunk"</li>
+                  </ul>
+                </div>
+
+                {quickEntryError && (
+                  <div className="bg-rose-50 border border-rose-200/60 p-3 rounded-xl text-sm font-medium text-rose-700 flex items-start gap-2">
+                    <UserX className="w-4 h-4 mt-0.5 shrink-0" />
+                    <p>{quickEntryError}</p>
+                  </div>
+                )}
+
+                <div className="relative">
+                  <textarea
+                    value={aiInput}
+                    onChange={(e) => setAiInput(e.target.value)}
+                    placeholder="Tell me who to mark..."
+                    rows={3}
+                    className="w-full p-4 bg-paper border border-cream-border rounded-xl focus:outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500/60 font-medium text-ink text-sm resize-none"
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault();
+                        handleAIEntry();
+                      }
+                    }}
+                    autoFocus
+                  />
+                  {isAiProcessing && (
+                    <div className="absolute inset-0 bg-white/60 backdrop-blur-[1px] flex items-center justify-center rounded-xl">
+                      <div className="flex flex-col items-center gap-2">
+                        <div className="w-6 h-6 border-2 border-indigo-500/30 border-t-indigo-600 rounded-full animate-spin" />
+                        <span className="text-[0.625rem] font-bold text-indigo-600 uppercase tracking-widest animate-pulse">Processing...</span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                <button
+                  onClick={handleAIEntry}
+                  disabled={isAiProcessing || !aiInput.trim()}
+                  className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3.5 px-4 rounded-xl flex items-center justify-center gap-2 transition-all shadow-[0_8px_20px_-8px_rgba(79,70,229,0.5)] disabled:opacity-50"
+                >
+                  {isAiProcessing ? (
+                    <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  ) : (
+                    <>
+                      <Bot className="w-4 h-4" />
+                      <span>Process message</span>
+                    </>
+                  )}
+                </button>
               </div>
             </motion.div>
           </div>
