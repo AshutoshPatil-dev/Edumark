@@ -85,7 +85,7 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
           </h1>
           <p className="mt-4 text-ink-muted text-base sm:text-lg leading-relaxed text-pretty">
             Mark lessons, see who needs support, and keep a clear record your
-            administration can use—without the extra noise.
+            administration can use - without the extra noise.
           </p>
 
           <div className="mt-12 grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-10">

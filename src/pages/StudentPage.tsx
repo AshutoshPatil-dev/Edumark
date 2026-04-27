@@ -491,7 +491,7 @@ export default function StudentPage({
                           : 'for this subject'}
                       </p>
                       <p className="text-[0.75rem] text-ink-muted/70 mt-1">
-                        A clean page — let&apos;s keep it that way.
+                        A clean page - let&apos;s keep it that way.
                       </p>
                     </div>
                   )}

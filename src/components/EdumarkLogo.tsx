@@ -4,11 +4,11 @@
  */
 
 /**
- * EdumarkLogo — a custom monogram for EduMark.
+ * EdumarkLogo - a custom monogram for EduMark.
  *
  * The mark is a rounded square badge containing a minimalist "E" built
  * from three horizontal strokes. The middle stroke is intentionally
- * shorter and is terminated by a small accent dot — the "mark."
+ * shorter and is terminated by a small accent dot - the "mark."
  *
  * Variants:
  *   "light"   → blue badge, light strokes, sky dot (on brand panels)
@@ -77,7 +77,7 @@ export default function EdumarkLogo({
       {/* Top stroke of the E */}
       <rect x="11" y="11" width="20" height="4" rx="2" fill={palette.stroke} />
 
-      {/* Middle stroke — intentionally shorter */}
+      {/* Middle stroke - intentionally shorter */}
       <rect x="11" y="20" width="13" height="4" rx="2" fill={palette.stroke} />
 
       {/* Bottom stroke */}
@@ -90,7 +90,7 @@ export default function EdumarkLogo({
 }
 
 /**
- * EdumarkWordmark — pairs the monogram with the EduMark wordmark set in
+ * EdumarkWordmark - pairs the monogram with the EduMark wordmark set in
  * Wordmark: accent "m" echoes the logo dot.
  */
 export function EdumarkWordmark({

@@ -529,7 +529,7 @@ export default function AttendancePage({
               <span className="text-ochre">lecture</span>
             </h1>
             <p className="text-ink-muted mt-3 max-w-xl leading-relaxed text-sm sm:text-base">
-              Pick the subject, date, and class—then set who was present or
+              Pick the subject, date, and class - then set who was present or
               absent.
             </p>
           </div>
@@ -572,7 +572,7 @@ export default function AttendancePage({
             className="bg-night text-white p-4 rounded-2xl flex items-center justify-center gap-3 font-medium"
           >
             <span className="w-1.5 h-1.5 rounded-full bg-ochre" />
-            <span>Saved — your attendance is on record.</span>
+            <span>Saved - your attendance is on record.</span>
           </motion.div>
         )}
       </AnimatePresence>

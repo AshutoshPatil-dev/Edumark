@@ -356,7 +356,7 @@ export default function LeaveRequestsPage({ profile, studentId }: LeaveRequestsP
                               {request.students?.name || 'Unknown'}
                             </p>
                             <p className="text-[0.6875rem] text-ink-muted mt-0.5">
-                              {request.students?.roll_no || '—'} · Div {request.students?.division || '—'}
+                              {request.students?.roll_no || '-'} · Div {request.students?.division || '-'}
                             </p>
                           </div>
                         </div>

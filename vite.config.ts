@@ -90,11 +90,11 @@ export default defineConfig({
     rollupOptions: {
       output: {
         manualChunks: {
-          // React core — rarely changes, browsers cache it forever
+          // React core - rarely changes, browsers cache it forever
           'vendor-react': ['react', 'react-dom', 'react-router-dom'],
           // Animation library
           'vendor-motion': ['motion'],
-          // Charts — heaviest dependency
+          // Charts - heaviest dependency
           'vendor-recharts': ['recharts'],
           // Supabase client
           'vendor-supabase': ['@supabase/supabase-js'],

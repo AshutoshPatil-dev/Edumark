@@ -2,7 +2,7 @@
   "name": "edumark",
   "private": true,
   "version": "1.0.0",
-  "description": "EduMark — attendance record system for educational institutions.",
+  "description": "EduMark - attendance record system for educational institutions.",
   "type": "module",
   "scripts": {
     "dev": "vite --port=3000 --host=0.0.0.0",

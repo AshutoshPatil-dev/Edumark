@@ -237,7 +237,7 @@ export default function DashboardPage({ students }: DashboardPageProps) {
         <div className="rule-spectrum max-w-md opacity-90" />
       </header>
 
-      {/* Stat strip — editorial "column" figures */}
+      {/* Stat strip - editorial "column" figures */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-px bg-cream-border rounded-3xl overflow-hidden border border-cream-border">
         {statCards.map((card, idx) => {
           const Icon = card.icon;
@@ -436,7 +436,7 @@ export default function DashboardPage({ students }: DashboardPageProps) {
         </motion.div>
       </div>
 
-      {/* Unused import guard — retained for potential expansion */}
+      {/* Unused import guard - retained for potential expansion */}
       <span className="sr-only">{getStatusColor('Excellent')}</span>
     </div>
   );

@@ -548,7 +548,7 @@ export default function AdminPage({ refreshData }: AdminPageProps) {
                           </span>
                         </td>
                         <td className="px-4 py-3 font-medium text-ink">{log.action}</td>
-                        <td className="px-4 py-3 text-ink-muted max-w-[280px] truncate">{log.details || '—'}</td>
+                        <td className="px-4 py-3 text-ink-muted max-w-[280px] truncate">{log.details || '-'}</td>
                       </tr>
                     ))
                   )}

@@ -2,7 +2,7 @@
 @variant dark (&:where(.dark, .dark *));
 
 /* ---------------------------------------------------------
-   EduMark — dual-tone brand: indigo (primary) + cyan (accent)
+   EduMark - dual-tone brand: indigo (primary) + cyan (accent)
    ochre* keys kept for Tailwind class compatibility → indigo family
    --color-card / --color-input: surfaces (dark mode overrides below)
 --------------------------------------------------------- */
@@ -115,7 +115,7 @@
   color: var(--color-ink);
 }
 
-/* Minimal scrollbar — barely there */
+/* Minimal scrollbar - barely there */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
@@ -200,7 +200,7 @@ textarea {
    Dynamic Color Themes
 --------------------------------------------------------- */
 :root[data-color-theme="original"] {
-  --color-ink: #0c1222; --color-ink-soft: #1e293b; --color-ink-muted: #64748b;
+  --color-ink: #0c1222; --color-ink-soft: #1e293b; --color-ink-muted: #566480;
   --color-paper: #f0f4f8; --color-paper-deep: #e2e8f0; --color-cream: #e2e8f0; --color-cream-soft: #f8fafc; --color-cream-border: #c7d2e0;
   --color-ochre: #1d4ed8; --color-ochre-soft: #60a5fa; --color-ochre-deep: #1e3a8a;
   --color-aqua: #06b6d4; --color-aqua-soft: #67e8f9; --color-aqua-muted: #0891b2;
@@ -217,7 +217,7 @@ textarea {
 }
 
 :root[data-color-theme="emerald"] {
-  --color-ink: #1a1c1a; --color-ink-soft: #2f332f; --color-ink-muted: #6b7269;
+  --color-ink: #1a1c1a; --color-ink-soft: #2f332f; --color-ink-muted: #5d645b;
   --color-paper: #fcfbf8; --color-paper-deep: #f4f1e8; --color-cream: #f4f1e8; --color-cream-soft: #faf9f6; --color-cream-border: #e6e0d5;
   --color-ochre: #10b981; --color-ochre-soft: #6ee7b7; --color-ochre-deep: #059669;
   --color-aqua: #14b8a6; --color-aqua-soft: #5eead4; --color-aqua-muted: #0d9488;
@@ -234,7 +234,7 @@ textarea {
 }
 
 :root[data-color-theme="violet"] {
-  --color-ink: #0f172a; --color-ink-soft: #334155; --color-ink-muted: #64748b;
+  --color-ink: #0f172a; --color-ink-soft: #334155; --color-ink-muted: #566480;
   --color-paper: #f8fafc; --color-paper-deep: #f1f5f9; --color-cream: #f1f5f9; --color-cream-soft: #ffffff; --color-cream-border: #e2e8f0;
   --color-ochre: #8b5cf6; --color-ochre-soft: #c4b5fd; --color-ochre-deep: #7c3aed;
   --color-aqua: #f97316; --color-aqua-soft: #fdba74; --color-aqua-muted: #ea580c;

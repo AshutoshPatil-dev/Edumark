@@ -2,7 +2,7 @@
 
 A considered attendance record system for educational institutions.
 Track attendance across divisions and lectures, review approvals, generate
-academic reports, and monitor student performance — all through a calm,
+academic reports, and monitor student performance - all through a calm,
 editorial interface.
 
 ## Features
@@ -48,10 +48,10 @@ The app will be available at `http://localhost:3000`.
 
 ## Scripts
 
-- `npm run dev` — start the Vite dev server
-- `npm run build` — create a production build
-- `npm run preview` — preview the production build
-- `npm run lint` — type-check the project with `tsc`
+- `npm run dev` - start the Vite dev server
+- `npm run build` - create a production build
+- `npm run preview` - preview the production build
+- `npm run lint` - type-check the project with `tsc`
 
 ## Project Structure
 
