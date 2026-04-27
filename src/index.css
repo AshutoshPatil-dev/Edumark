@@ -13,7 +13,7 @@
 
   --color-ink: #09090b;
   --color-ink-soft: #3f3f46;
-  --color-ink-muted: #71717a;
+  --color-ink-muted: #636368;
 
   /* Warm off-white (Paper) to reduce glare without looking gray */
   --color-paper: #faf9f6;
@@ -75,7 +75,7 @@
 .dark {
   --color-ink: #fafafa;
   --color-ink-soft: #a1a1aa;
-  --color-ink-muted: #71717a;
+  --color-ink-muted: #8b8b93;
 
   --color-paper: #09090b;
   --color-paper-deep: #18181b;

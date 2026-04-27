@@ -46,7 +46,7 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
   };
 
   return (
-    <div className="min-h-screen lg:h-screen lg:overflow-hidden flex flex-col lg:grid lg:grid-cols-2 bg-transparent relative">
+    <main className="min-h-screen lg:h-screen lg:overflow-hidden flex flex-col lg:grid lg:grid-cols-2 bg-transparent relative">
       <div className="fixed top-4 right-4 z-50 sm:top-6 sm:right-6">
         <ThemeToggle className="bg-card/80 shadow-sm border border-cream-border/80" />
       </div>
@@ -70,7 +70,7 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
                 </span>
                 ark
               </span>
-              <span className="text-[0.625rem] uppercase tracking-[0.16em] text-ink-muted mt-1.5 block">
+              <span className="text-[0.625rem] uppercase tracking-[0.16em] text-ink-soft mt-1.5 block">
                 For faculty &amp; students
               </span>
             </div>
@@ -90,33 +90,33 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
 
           <div className="mt-12 grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-10">
             <div>
-              <h3 className="font-sans text-sm font-semibold text-ink uppercase tracking-wider mb-3">
+              <h2 className="font-sans text-sm font-semibold text-ink uppercase tracking-wider mb-3">
                 Advanced Analytics
-              </h3>
+              </h2>
               <p className="text-sm text-ink-muted leading-relaxed">
                 Our School ERP utilizes time-weighted attendance (TWAS) to identify at-risk students before they fall behind, providing actionable insights for faculty.
               </p>
             </div>
             <div>
-              <h3 className="font-sans text-sm font-semibold text-ink uppercase tracking-wider mb-3">
+              <h2 className="font-sans text-sm font-semibold text-ink uppercase tracking-wider mb-3">
                 Faculty Management
-              </h3>
+              </h2>
               <p className="text-sm text-ink-muted leading-relaxed">
                 Streamline timetable management and lesson tracking with an intuitive interface designed for busy educators and administrators.
               </p>
             </div>
             <div>
-              <h3 className="font-sans text-sm font-semibold text-ink uppercase tracking-wider mb-3">
+              <h2 className="font-sans text-sm font-semibold text-ink uppercase tracking-wider mb-3">
                 Secure Portals
-              </h3>
+              </h2>
               <p className="text-sm text-ink-muted leading-relaxed">
                 Separate, secure access for staff and students ensures data privacy while providing real-time visibility into attendance records and reports.
               </p>
             </div>
             <div>
-              <h3 className="font-sans text-sm font-semibold text-ink uppercase tracking-wider mb-3">
+              <h2 className="font-sans text-sm font-semibold text-ink uppercase tracking-wider mb-3">
                 Enterprise Reporting
-              </h3>
+              </h2>
               <p className="text-sm text-ink-muted leading-relaxed">
                 Generate and export comprehensive attendance reports compatible with institutional requirements, simplifying school administration workflows.
               </p>
@@ -219,6 +219,6 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
           </div>
         </motion.div>
       </section>
-    </div>
+    </main>
   );
 }

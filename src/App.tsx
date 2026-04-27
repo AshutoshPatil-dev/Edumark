@@ -12,16 +12,16 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { useState, useEffect, lazy, Suspense } from 'react';
 import { AlertCircle } from 'lucide-react';
 import type { Student, Profile } from './types';
-import LoginPage from './pages/LoginPage';
-import DashboardPage from './pages/DashboardPage';
-import AttendancePage from './pages/AttendancePage';
-import StudentPage from './pages/StudentPage';
 import Navbar from './components/Navbar';
 import MissingAttendanceAlert from './components/MissingAttendanceAlert';
 import { SyncProvider } from './context/SyncContext';
 import { supabase } from './lib/supabase';
 
 // Lazy load heavy pages
+const LoginPage = lazy(() => import('./pages/LoginPage'));
+const DashboardPage = lazy(() => import('./pages/DashboardPage'));
+const AttendancePage = lazy(() => import('./pages/AttendancePage'));
+const StudentPage = lazy(() => import('./pages/StudentPage'));
 const ReportPage = lazy(() => import('./pages/ReportPage'));
 const AdminPage = lazy(() => import('./pages/AdminPage'));
 const LeaveRequestsPage = lazy(() => import('./pages/LeaveRequestsPage'));
@@ -279,10 +279,18 @@ export default function App() {
   }
 
   if (!isLoggedIn) {
-    return <LoginPage onLogin={() => {
-      localStorage.setItem('edumark_last_activity', Date.now().toString());
-      setIsLoggedIn(true);
-    }} />;
+    return (
+      <Suspense fallback={
+        <div className="min-h-screen flex items-center justify-center bg-transparent">
+          <div className="w-8 h-8 border-[3px] border-ink/15 border-t-ochre rounded-full animate-spin" />
+        </div>
+      }>
+        <LoginPage onLogin={() => {
+          localStorage.setItem('edumark_last_activity', Date.now().toString());
+          setIsLoggedIn(true);
+        }} />
+      </Suspense>
+    );
   }
 
   if (profileError) {
