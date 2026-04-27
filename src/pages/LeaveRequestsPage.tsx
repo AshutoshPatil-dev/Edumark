@@ -21,6 +21,8 @@ import { motion, AnimatePresence } from 'motion/react';
 import type { Profile, LeaveRequest, LeaveStatus, LeaveType } from '../types';
 import { writeAdminLog } from '../utils/admin';
 
+import { LeaveRequestForm } from '../components/Leave/LeaveRequestForm';
+
 interface LeaveRequestsPageProps {
   profile: Profile;
   studentId?: string;
@@ -64,10 +66,6 @@ export default function LeaveRequestsPage({ profile, studentId }: LeaveRequestsP
 
   // Student form state
   const [showForm, setShowForm] = useState(false);
-  const [formStartDate, setFormStartDate] = useState('');
-  const [formEndDate, setFormEndDate] = useState('');
-  const [formReason, setFormReason] = useState('');
-  const [formType, setFormType] = useState<LeaveType>('medical');
   const [formSubmitting, setFormSubmitting] = useState(false);
   const [formMessage, setFormMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
@@ -124,18 +122,17 @@ export default function LeaveRequestsPage({ profile, studentId }: LeaveRequestsP
     setActionLoading(null);
   };
 
-  const handleSubmitRequest = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmitRequest = async (data: { startDate: string; endDate: string; reason: string; leaveType: LeaveType }) => {
     if (!studentId) return;
     setFormSubmitting(true);
     setFormMessage(null);
 
     const { error } = await supabase.from('leave_requests').insert({
       student_id: studentId,
-      start_date: formStartDate,
-      end_date: formEndDate,
-      reason: formReason,
-      leave_type: formType,
+      start_date: data.startDate,
+      end_date: data.endDate,
+      reason: data.reason,
+      leave_type: data.leaveType,
       status: 'pending',
     });
 
@@ -143,10 +140,6 @@ export default function LeaveRequestsPage({ profile, studentId }: LeaveRequestsP
       setFormMessage({ type: 'error', text: error.message || 'Failed to submit request.' });
     } else {
       setFormMessage({ type: 'success', text: 'Leave request submitted successfully. Your faculty will review it.' });
-      setFormStartDate('');
-      setFormEndDate('');
-      setFormReason('');
-      setFormType('medical');
       setShowForm(false);
       await fetchRequests();
     }
@@ -199,83 +192,7 @@ export default function LeaveRequestsPage({ profile, studentId }: LeaveRequestsP
             exit={{ opacity: 0, height: 0 }}
             className="overflow-hidden"
           >
-            <form onSubmit={handleSubmitRequest} className="bg-card p-8 rounded-3xl border border-cream-border space-y-6">
-              <div className="flex items-center gap-3 mb-2">
-                <div className="w-11 h-11 bg-cream rounded-xl flex items-center justify-center border border-cream-border">
-                  <Send className="w-5 h-5 text-ink" />
-                </div>
-                <div>
-                  <p className="eyebrow">Submit</p>
-                  <h2 className="font-sans text-xl font-semibold text-ink tracking-tight">New leave request</h2>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-1.5">
-                  <label className="eyebrow block">From date</label>
-                  <input
-                    type="date"
-                    required
-                    value={formStartDate}
-                    onChange={(e) => setFormStartDate(e.target.value)}
-                    className="w-full px-4 py-3 bg-paper border border-cream-border rounded-xl focus:outline-none focus:ring-4 focus:ring-ochre/10 focus:border-ochre/60 font-medium text-ink"
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <label className="eyebrow block">To date</label>
-                  <input
-                    type="date"
-                    required
-                    value={formEndDate}
-                    onChange={(e) => setFormEndDate(e.target.value)}
-                    min={formStartDate}
-                    className="w-full px-4 py-3 bg-paper border border-cream-border rounded-xl focus:outline-none focus:ring-4 focus:ring-ochre/10 focus:border-ochre/60 font-medium text-ink"
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="eyebrow block">Leave type</label>
-                <div className="flex flex-wrap gap-2">
-                  {LEAVE_TYPES.map((lt) => (
-                    <button
-                      key={lt.id}
-                      type="button"
-                      onClick={() => setFormType(lt.id)}
-                      className={cn(
-                        'px-4 py-2.5 rounded-xl text-sm font-semibold border transition-all',
-                        formType === lt.id
-                          ? 'bg-ochre text-white border-ochre'
-                          : 'bg-paper text-ink border-cream-border hover:border-ochre/50',
-                      )}
-                    >
-                      {lt.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="eyebrow block">Reason</label>
-                <textarea
-                  required
-                  value={formReason}
-                  onChange={(e) => setFormReason(e.target.value)}
-                  rows={3}
-                  placeholder="Describe the reason for your leave..."
-                  className="w-full px-4 py-3 bg-paper border border-cream-border rounded-xl focus:outline-none focus:ring-4 focus:ring-ochre/10 focus:border-ochre/60 font-medium text-ink resize-none"
-                />
-              </div>
-
-              <button
-                type="submit"
-                disabled={formSubmitting}
-                className="bg-ochre hover:bg-ochre-deep text-white font-semibold py-3 px-6 rounded-xl disabled:opacity-50 flex items-center justify-center gap-2"
-              >
-                <Send className="w-4 h-4" />
-                <span>{formSubmitting ? 'Submitting…' : 'Submit request'}</span>
-              </button>
-            </form>
+            <LeaveRequestForm formSubmitting={formSubmitting} onSubmit={handleSubmitRequest} />
           </motion.div>
         )}
       </AnimatePresence>

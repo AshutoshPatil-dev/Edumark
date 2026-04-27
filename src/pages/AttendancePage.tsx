@@ -25,6 +25,11 @@ import { motion, AnimatePresence } from 'motion/react';
 import { supabase } from '../lib/supabase';
 import { useSearchParams } from 'react-router-dom';
 import { useSync } from '../context/SyncContext';
+import { AttendanceHeader } from '../components/Attendance/AttendanceHeader';
+import { QuickEntryModal } from '../components/Attendance/QuickEntryModal';
+import { NoteModal } from '../components/Attendance/NoteModal';
+import { AttendanceRoster } from '../components/Attendance/AttendanceRoster';
+import { AttendanceFilters } from '../components/Attendance/AttendanceFilters';
 
 interface AttendancePageProps {
   students: Student[];
@@ -478,7 +483,6 @@ export default function AttendancePage({
       await addToQueue('attendance', recordsToUpsert);
       setInitialAbsenteeIds(new Set(absenteeIds));
       setInitialRemarks({ ...remarks });
-      setIsOfflineSaved(true);
       setShowSuccess(true);
       setJustSaved(true);
       setTimeout(() => setJustSaved(false), 300);
@@ -520,38 +524,11 @@ export default function AttendancePage({
   return (
     <div className="space-y-10">
       {/* Masthead */}
-      <header className="flex flex-col gap-6">
-        <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
-          <div>
-            <p className="eyebrow">Mark attendance</p>
-            <h1 className="font-sans text-3xl md:text-4xl font-semibold text-ink mt-2 tracking-tight text-balance">
-              Today&apos;s{' '}
-              <span className="text-ochre">lecture</span>
-            </h1>
-            <p className="text-ink-muted mt-3 max-w-xl leading-relaxed text-sm sm:text-base">
-              Pick the subject, date, and class - then set who was present or
-              absent.
-            </p>
-          </div>
-          <button
-            onClick={handleSave}
-            disabled={
-              isSaving ||
-              availableSubjects.length === 0 ||
-              validDivisions.length === 0
-            }
-            className="bg-ochre hover:bg-ochre-deep text-white px-6 py-3.5 rounded-xl font-semibold shadow-[0_8px_24px_-8px_rgba(37,99,235,0.45)] flex items-center justify-center gap-2 active:scale-[0.99] disabled:opacity-60 disabled:cursor-not-allowed"
-          >
-            {isSaving ? (
-              <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-            ) : (
-              <Save className="w-4 h-4" />
-            )}
-            <span>{isSaving ? 'Saving…' : 'Save attendance'}</span>
-          </button>
-        </div>
-        <div className="rule-paper" />
-      </header>
+      <AttendanceHeader 
+        isSaving={isSaving} 
+        disabled={isSaving || availableSubjects.length === 0 || validDivisions.length === 0} 
+        handleSave={handleSave} 
+      />
 
       {availableSubjects.length === 0 && (
         <div className="bg-cream border border-cream-border text-ink p-5 rounded-2xl flex items-center gap-3">
@@ -579,453 +556,70 @@ export default function AttendancePage({
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         {/* Control column */}
-        <div className="lg:col-span-4 space-y-6">
-          <div className="bg-card p-6 rounded-3xl border border-cream-border space-y-6">
-            <div className="flex items-center justify-between">
-              <p className="eyebrow">Lecture slot</p>
-              <span className="text-[0.625rem] uppercase tracking-[0.2em] text-ink-muted">
-                {isPractical ? 'Practical' : 'Theory'}
-              </span>
-            </div>
-
-            {/* Subject */}
-            <div className="space-y-2">
-              <label className="text-[0.75rem] font-semibold text-ink flex items-center gap-2">
-                <BookOpen className="w-[14px] h-[14px] text-ochre" />
-                <span>Subject</span>
-              </label>
-              <div className="relative" ref={subjectDropdownRef}>
-                <button
-                  onClick={() => availableSubjects.length > 0 && setIsSubjectDropdownOpen(!isSubjectDropdownOpen)}
-                  className={cn(
-                    'w-full flex items-center justify-between px-4 py-3 bg-paper border rounded-xl focus:outline-none transition-all font-medium text-ink',
-                    isSubjectDropdownOpen
-                      ? 'border-ochre ring-4 ring-ochre/10'
-                      : 'border-cream-border hover:border-ochre/50',
-                    availableSubjects.length === 0 && 'opacity-50 cursor-not-allowed',
-                  )}
-                >
-                  <div className="flex items-center gap-2">
-                    <BookOpen className={cn('w-[14px] h-[14px] transition-colors', isSubjectDropdownOpen ? 'text-ochre' : 'text-ink/40')} />
-                    <span>{availableSubjects.length > 0 ? selectedSubject : 'No subjects assigned'}</span>
-                  </div>
-                  <ChevronDown className={cn('w-4 h-4 text-ink/40 transition-transform duration-200', isSubjectDropdownOpen && 'rotate-180')} />
-                </button>
-
-                <AnimatePresence>
-                  {isSubjectDropdownOpen && (
-                    <motion.div
-                      initial={{ opacity: 0, y: 8, scale: 0.98 }}
-                      animate={{ opacity: 1, y: 0, scale: 1 }}
-                      exit={{ opacity: 0, y: 8, scale: 0.98 }}
-                      transition={{ duration: 0.15, ease: 'easeOut' }}
-                      className="absolute top-full left-0 right-0 z-50 mt-2 py-2 bg-card border border-cream-border rounded-xl shadow-[0_20px_40px_-15px_rgba(0,0,0,0.12)] backdrop-blur-xl overflow-hidden max-h-56 overflow-y-auto"
-                    >
-                      {availableSubjects.map((sub) => (
-                        <button
-                          key={sub}
-                          onClick={() => {
-                            handleConfigChange(setSelectedSubject, sub as SubjectId);
-                            setIsSubjectDropdownOpen(false);
-                          }}
-                          className={cn(
-                            'w-full flex items-center gap-3 px-4 py-2.5 text-[0.875rem] font-medium transition-colors',
-                            selectedSubject === sub
-                              ? 'bg-ochre/10 text-ochre-deep'
-                              : 'text-ink hover:bg-cream-soft',
-                          )}
-                        >
-                          {selectedSubject === sub && (
-                            <span className="w-1.5 h-1.5 rounded-full bg-ochre shrink-0" />
-                          )}
-                          <span className={selectedSubject !== sub ? 'ml-[14px]' : ''}>{sub}</span>
-                        </button>
-                      ))}
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </div>
-            </div>
-
-            {/* Date */}
-            <div className="space-y-2">
-              <label className="text-[0.75rem] font-semibold text-ink flex items-center gap-2">
-                <CalendarIcon className="w-[14px] h-[14px] text-ochre" />
-                <span>Date</span>
-              </label>
-              <input
-                type="date"
-                value={date}
-                onChange={(e) => handleConfigChange(setDate, e.target.value)}
-                className="w-full p-3 bg-paper border border-cream-border rounded-xl focus:outline-none focus:ring-4 focus:ring-ochre/10 focus:border-ochre/60 font-medium text-ink"
-              />
-            </div>
-
-            {validDivisions.length > 0 ? (
-              <>
-                {/* Division */}
-                <div className="space-y-2">
-                  <label className="text-[0.75rem] font-semibold text-ink flex items-center gap-2">
-                    <UserCheck className="w-[14px] h-[14px] text-ochre" />
-                    <span>Division</span>
-                  </label>
-                  <div className="flex flex-wrap gap-2">
-                    {validDivisions.map((div) => (
-                      <button
-                        key={div}
-                        onClick={() => {
-                          handleConfigChange((val) => {
-                            setSelectedDivision(val);
-                            setSelectedBatch('');
-                          }, div);
-                        }}
-                        className={cn(
-                          'flex-1 min-w-[56px] py-3 rounded-xl font-semibold text-sm tabular-nums border transition-all',
-                          selectedDivision === div
-                            ? 'bg-ochre text-white border-ochre'
-                            : 'bg-paper text-ink border-cream-border hover:border-ochre/50',
-                        )}
-                      >
-                        {div}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Batch */}
-                {isPractical && validBatches.length > 0 && (
-                  <div className="space-y-2">
-                    <label className="text-[0.75rem] font-semibold text-ink flex items-center gap-2">
-                      <Users className="w-[14px] h-[14px] text-ochre" />
-                      <span>Batch</span>
-                    </label>
-                    <div className="flex flex-wrap gap-2">
-                      {validBatches.map((batch) => (
-                        <button
-                          key={batch}
-                          onClick={() => handleConfigChange(setSelectedBatch, batch)}
-                          className={cn(
-                            'flex-1 min-w-[60px] py-3 rounded-xl font-semibold text-sm border',
-                            selectedBatch === batch
-                              ? 'bg-ochre text-white border-ochre'
-                              : 'bg-paper text-ink border-cream-border hover:border-ochre/50',
-                          )}
-                        >
-                          {batch}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* Lecture No */}
-                <div className="space-y-2">
-                  <label className="text-[0.75rem] font-semibold text-ink flex items-center gap-2">
-                    <Hash className="w-[14px] h-[14px] text-ochre" />
-                    <span>Lecture number</span>
-                  </label>
-                  <div className="flex flex-wrap gap-2">
-                    {validLectures.map((num) => (
-                      <button
-                        key={num}
-                        onClick={() => handleConfigChange(setLectureNo, num)}
-                        className={cn(
-                          'flex-1 min-w-[44px] py-3 rounded-xl font-semibold text-sm tabular-nums border transition-all',
-                          lectureNo === num
-                            ? 'bg-ochre text-white border-ochre'
-                            : 'bg-paper text-ink border-cream-border hover:border-ochre/50',
-                        )}
-                      >
-                        {isPractical ? `${num}–${num + 1}` : num}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              </>
-            ) : (
-              <div className="bg-cream border border-cream-border text-ink p-4 rounded-xl text-sm font-medium">
-                No lectures scheduled for {selectedSubject} on this date.
-              </div>
-            )}
-          </div>
-        </div>
+        <AttendanceFilters
+          isPractical={isPractical}
+          availableSubjects={availableSubjects}
+          selectedSubject={selectedSubject}
+          setSelectedSubject={setSelectedSubject}
+          isSubjectDropdownOpen={isSubjectDropdownOpen}
+          setIsSubjectDropdownOpen={setIsSubjectDropdownOpen}
+          subjectDropdownRef={subjectDropdownRef}
+          date={date}
+          setDate={setDate}
+          validDivisions={validDivisions}
+          selectedDivision={selectedDivision}
+          setSelectedDivision={setSelectedDivision}
+          validBatches={validBatches}
+          selectedBatch={selectedBatch}
+          setSelectedBatch={setSelectedBatch}
+          validLectures={validLectures}
+          lectureNo={lectureNo}
+          setLectureNo={setLectureNo}
+          handleConfigChange={handleConfigChange}
+        />
 
         {/* Student grid */}
-        <div className="lg:col-span-8 space-y-5">
-          <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3 px-1 mb-1">
-            <h2 className="font-sans text-lg font-semibold text-ink tracking-tight">Roster</h2>
-            <div className="flex flex-wrap items-center gap-2.5">
-              <button
-                onClick={() => setShowQuickEntry(true)}
-                disabled={availableSubjects.length === 0 || validDivisions.length === 0}
-                className="px-3 py-1.5 bg-ochre/10 text-ochre-deep hover:bg-ochre/20 rounded-lg text-[0.75rem] font-bold tracking-wide transition-colors flex items-center gap-1.5 border border-transparent hover:border-ochre/30 shadow-sm disabled:opacity-50 disabled:pointer-events-none"
-              >
-                <Zap className="w-3.5 h-3.5" />
-                QUICK ENTRY
-              </button>
-              <div className="px-3 py-1.5 bg-emerald-50 text-emerald-700 rounded-lg border border-emerald-200/70 text-[0.75rem] font-bold tracking-wide flex items-center gap-1.5 shadow-sm">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-                {presentCount}/{filteredStudents.length} PRESENT
-              </div>
-              <div className="px-3 py-1.5 bg-rose-50 text-rose-700 rounded-lg border border-rose-200/70 text-[0.75rem] font-bold tracking-wide flex items-center gap-1.5 shadow-sm">
-                <span className="w-1.5 h-1.5 rounded-full bg-rose-500"></span>
-                {filteredStudents.filter((s) => absenteeIds.has(s.id)).length} ABSENT
-              </div>
-            </div>
-          </div>
-
-          <div className="relative group">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-[18px] h-[18px] text-ink/40 group-focus-within:text-ochre" />
-            <input
-              type="text"
-              placeholder="Search by name or roll number…"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-12 pr-4 py-4 bg-card border border-cream-border rounded-2xl focus:outline-none focus:ring-4 focus:ring-ochre/10 focus:border-ochre/60 font-medium text-ink placeholder:text-ink/30"
-            />
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
-            {filteredStudents.map((student) => {
-              const isAbsent = absenteeIds.has(student.id);
-              return (
-                <motion.button
-                  layout
-                  key={student.id}
-                  onClick={() => toggleAbsentee(student.id)}
-                  disabled={
-                    availableSubjects.length === 0 ||
-                    validDivisions.length === 0 ||
-                    justSaved
-                  }
-                  className={cn(
-                    'group relative p-4 rounded-2xl border text-left overflow-hidden',
-                    (availableSubjects.length === 0 || validDivisions.length === 0) &&
-                    'opacity-50 cursor-not-allowed',
-                    justSaved
-                      ? 'bg-night text-white border-night scale-[0.98]'
-                      : isAbsent
-                        ? 'bg-rose-50 border-rose-200/80 hover:border-rose-300'
-                        : 'bg-card border-cream-border hover:border-ochre/40 hover:shadow-[0_8px_20px_-12px_rgba(11,15,25,0.15)]',
-                  )}
-                >
-                  <div className="flex items-center justify-between relative z-10 gap-3">
-                    <div className="min-w-0">
-                      <p
-                        className={cn(
-                          'font-semibold text-[0.9375rem] leading-tight truncate',
-                          justSaved
-                            ? 'text-white'
-                            : isAbsent
-                              ? 'text-rose-900'
-                              : 'text-ink',
-                        )}
-                      >
-                        {student.name}
-                      </p>
-                      <p
-                        className={cn(
-                          'text-[0.6875rem] uppercase tracking-[0.12em] mt-1 font-medium',
-                          justSaved
-                            ? 'text-white/50'
-                            : isAbsent
-                              ? 'text-rose-700/80'
-                              : 'text-ink-muted',
-                        )}
-                      >
-                        {student.rollNo}
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-2 shrink-0">
-                      {isAbsent && !justSaved && (
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setActiveNoteStudent(student.id);
-                          }}
-                          className={cn(
-                            'w-10 h-10 rounded-xl flex items-center justify-center border transition-all',
-                            remarks[student.id]
-                              ? 'bg-rose-100 text-rose-700 border-rose-200 shadow-sm'
-                              : 'bg-white/50 text-rose-400 border-dashed border-rose-300 hover:text-rose-600 hover:border-rose-400 hover:bg-white',
-                          )}
-                          title={remarks[student.id] ? `Note: ${remarks[student.id]}` : 'Add note'}
-                        >
-                          <MessageSquare className={cn('w-4 h-4', remarks[student.id] && 'fill-rose-200')} />
-                        </button>
-                      )}
-                      <div
-                        className={cn(
-                          'w-10 h-10 rounded-xl flex items-center justify-center border shrink-0 transition-colors',
-                          justSaved
-                            ? 'bg-white/10 text-white border-white/20'
-                            : isAbsent
-                              ? 'bg-rose-600 text-white border-rose-600'
-                              : 'bg-cream text-ink border-cream-border group-hover:bg-night group-hover:text-white group-hover:border-night',
-                        )}
-                      >
-                        {isAbsent ? (
-                          <UserX className="w-5 h-5" />
-                        ) : (
-                          <UserCheck className="w-5 h-5" />
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                </motion.button>
-              );
-            })}
-          </div>
-        </div>
+        <AttendanceRoster
+          filteredStudents={filteredStudents}
+          absenteeIds={absenteeIds}
+          toggleAbsentee={toggleAbsentee}
+          setShowQuickEntry={setShowQuickEntry}
+          availableSubjects={availableSubjects}
+          validDivisions={validDivisions}
+          presentCount={presentCount}
+          searchQuery={searchQuery}
+          setSearchQuery={setSearchQuery}
+          justSaved={justSaved}
+          setActiveNoteStudent={setActiveNoteStudent}
+          remarks={remarks}
+        />
       </div>
 
       {/* Note Modal */}
       <AnimatePresence>
         {activeNoteStudent && (
-          <div className="fixed inset-0 z-[110] flex items-center justify-center p-4">
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="absolute inset-0 bg-ink/40 backdrop-blur-sm"
-              onClick={() => setActiveNoteStudent(null)}
-            />
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95, y: 10 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: 10 }}
-              transition={{ duration: 0.2 }}
-              className="bg-card p-6 rounded-3xl border border-cream-border space-y-4 relative z-10 w-full max-w-sm shadow-2xl"
-            >
-              <h3 className="text-ink font-semibold flex items-center text-lg">
-                <MessageSquare className="w-5 h-5 mr-2 text-ochre" />
-                Add absence note
-              </h3>
-              <input
-                type="text"
-                autoFocus
-                placeholder="e.g. Medical leave, Late, etc."
-                value={remarks[activeNoteStudent] || ''}
-                onChange={(e) => handleRemarkChange(activeNoteStudent, e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') setActiveNoteStudent(null);
-                }}
-                className="w-full px-4 py-3 bg-paper border border-cream-border rounded-xl focus:outline-none focus:ring-4 focus:ring-ochre/10 focus:border-ochre/60 font-medium text-ink"
-              />
-              <button
-                onClick={() => setActiveNoteStudent(null)}
-                className="w-full bg-ochre hover:bg-ochre-deep text-white font-semibold py-3 px-4 rounded-xl flex items-center justify-center transition-colors"
-              >
-                Done
-              </button>
-            </motion.div>
-          </div>
+          <NoteModal
+            activeNoteStudent={activeNoteStudent}
+            remarks={remarks}
+            setActiveNoteStudent={setActiveNoteStudent}
+            handleRemarkChange={handleRemarkChange}
+          />
         )}
       </AnimatePresence>
 
       {/* Quick Entry Modal */}
       <AnimatePresence>
         {showQuickEntry && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="absolute inset-0 bg-ink/40 backdrop-blur-sm"
-              onClick={() => {
-                setShowQuickEntry(false);
-                setQuickEntryError(null);
-              }}
-            />
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95, y: 10 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: 10 }}
-              transition={{ duration: 0.2 }}
-              className="bg-card p-6 md:p-8 rounded-3xl border border-cream-border space-y-6 relative z-10 w-full max-w-lg shadow-2xl"
-            >
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="text-ink font-semibold flex items-center text-lg">
-                    <Zap className="w-5 h-5 mr-2 text-ochre" />
-                    Quick entry
-                  </h3>
-                  <p className="text-ink-muted text-sm mt-1">
-                    Enter roll numbers to quickly mark attendance.
-                  </p>
-                </div>
-                <button
-                  onClick={() => {
-                    setShowQuickEntry(false);
-                    setQuickEntryError(null);
-                  }}
-                  className="w-8 h-8 flex items-center justify-center rounded-full bg-cream hover:bg-cream-border text-ink-muted transition-colors"
-                >
-                  <X className="w-4 h-4" />
-                  <span className="sr-only">Close</span>
-                </button>
-              </div>
-
-              <div className="space-y-4">
-                <p className="text-ink-muted text-[0.8125rem] leading-relaxed">
-                  Enter the last digits of roll numbers (e.g. 1, 2, 5), separated by
-                  commas.
-                </p>
-                {quickEntryError && (
-                  <div className="bg-rose-50 border border-rose-200/60 p-3 rounded-xl text-sm font-medium text-rose-700 flex items-start gap-2">
-                    <UserX className="w-4 h-4 mt-0.5 shrink-0" />
-                    <p>{quickEntryError}</p>
-                  </div>
-                )}
-                <input
-                  type="text"
-                  value={quickEntryInput}
-                  onChange={(e) => setQuickEntryInput(e.target.value)}
-                  placeholder="e.g. 1, 2, 3, 4"
-                  className="w-full p-4 bg-paper border border-cream-border rounded-xl focus:outline-none focus:ring-4 focus:ring-ochre/10 focus:border-ochre/60 font-medium text-ink font-mono text-sm"
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                      e.preventDefault();
-                      handleQuickEntry('absent');
-                    }
-                  }}
-                  autoFocus
-                />
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => handleQuickEntry('absent')}
-                    className="flex-1 bg-rose-50 text-rose-700 hover:bg-rose-100 py-3 rounded-xl font-semibold text-[0.8125rem] border border-rose-200/70"
-                  >
-                    Mark absent
-                  </button>
-                  <button
-                    onClick={() => handleQuickEntry('present')}
-                    className="flex-1 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 py-3 rounded-xl font-semibold text-[0.8125rem] border border-emerald-200/70"
-                  >
-                    Mark present
-                  </button>
-                </div>
-              </div>
-
-              <div className="pt-6 border-t border-cream-border flex justify-between items-center">
-                <span className="eyebrow">Bulk Actions</span>
-                <div className="flex gap-2">
-                  <button
-                    onClick={markAllPresent}
-                    className="text-[0.75rem] font-semibold text-ink hover:text-ochre-deep bg-cream hover:bg-cream-soft px-4 py-2 rounded-lg border border-cream-border"
-                  >
-                    All present
-                  </button>
-                  <button
-                    onClick={markAllAbsent}
-                    className="text-[0.75rem] font-semibold text-rose-700 hover:text-rose-800 bg-rose-50 hover:bg-rose-100 px-4 py-2 rounded-lg border border-rose-200/70"
-                  >
-                    All absent
-                  </button>
-                </div>
-              </div>
-            </motion.div>
-          </div>
+          <QuickEntryModal
+            quickEntryInput={quickEntryInput}
+            quickEntryError={quickEntryError}
+            setQuickEntryInput={setQuickEntryInput}
+            setShowQuickEntry={setShowQuickEntry}
+            setQuickEntryError={setQuickEntryError}
+            handleQuickEntry={handleQuickEntry}
+            markAllPresent={markAllPresent}
+            markAllAbsent={markAllAbsent}
+          />
         )}
       </AnimatePresence>
     </div>

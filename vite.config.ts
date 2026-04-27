@@ -52,7 +52,6 @@ export default defineConfig({
     blockSensitiveFiles,
     VitePWA({
       registerType: 'autoUpdate',
-      injectRegister: 'script-defer',
       includeAssets: ['pwa-192.png', 'pwa-512.png'],
       manifest: {
         name: 'Edumark - Class Attendance',

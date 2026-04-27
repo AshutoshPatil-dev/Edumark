@@ -15,9 +15,13 @@ import { DIVISIONS, type DivisionId } from '../constants';
 import { cn, getCorrectBatchesForDivision } from '../utils/attendance';
 import type { AdminLog, AdminLogCategory } from '../types';
 import AdminTimetableEditor from '../components/AdminTimetableEditor';
+import { AdminLogsTable } from '../components/Admin/AdminLogsTable';
+import { AddStudentForm } from '../components/Admin/AddStudentForm';
+import { BulkStudentUpload } from '../components/Admin/BulkStudentUpload';
+import { TimetableUpload } from '../components/Admin/TimetableUpload';
 import { writeAdminLog } from '../utils/admin';
 
-function getDivisionFromRollNo(rollNo: string): DivisionId {
+export function getDivisionFromRollNo(rollNo: string): DivisionId {
   if (rollNo && rollNo.length >= 5) {
     const divChar = rollNo.charAt(4);
     const divNum = parseInt(divChar, 10);
@@ -43,11 +47,6 @@ export default function AdminPage({ refreshData }: AdminPageProps) {
 
   const [name, setName] = useState('');
   const [rollNo, setRollNo] = useState('');
-  const [batch, setBatch] = useState('');
-
-  const [bulkText, setBulkText] = useState('');
-  const [timetableCSV, setTimetableCSV] = useState('');
-
   const [logs, setLogs] = useState<AdminLog[]>([]);
   const [logCategory, setLogCategory] = useState<AdminLogCategory | 'all'>('all');
   const [isLoadingLogs, setIsLoadingLogs] = useState(false);
@@ -120,15 +119,14 @@ export default function AdminPage({ refreshData }: AdminPageProps) {
     return user?.id ?? null;
   };
 
-  const handleSingleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSingleSubmit = async (data: { name: string; rollNo: string; batch: string }) => {
     setIsLoading(true);
     setMessage(null);
     try {
-      const division = getDivisionFromRollNo(rollNo);
+      const division = getDivisionFromRollNo(data.rollNo);
       const { error } = await supabase
         .from('students')
-        .upsert([{ name, roll_no: rollNo, division, batch: batch || null }], {
+        .upsert([{ name: data.name, roll_no: data.rollNo, division, batch: data.batch || null }], {
           onConflict: 'roll_no',
         });
       if (error) throw error;
@@ -139,14 +137,11 @@ export default function AdminPage({ refreshData }: AdminPageProps) {
           actorId,
           'student',
           'Added student',
-          `${name} (${rollNo}) → Division ${division}${batch ? `, Batch ${batch}` : ''}`,
+          `${data.name} (${data.rollNo}) → Division ${division}${data.batch ? `, Batch ${data.batch}` : ''}`,
         );
       }
 
-      setMessage({ type: 'success', text: `Student ${name} added to Division ${division}.` });
-      setName('');
-      setRollNo('');
-      setBatch('');
+      setMessage({ type: 'success', text: `Student ${data.name} added to Division ${division}.` });
       await refreshData();
       if (mainTab === 'logs') fetchLogs(); // Refresh logs if on that tab
     } catch (err: any) {
@@ -156,12 +151,11 @@ export default function AdminPage({ refreshData }: AdminPageProps) {
     }
   };
 
-  const handleBulkSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleBulkSubmit = async (csvText: string) => {
     setIsLoading(true);
     setMessage(null);
     try {
-      let lines = bulkText
+      let lines = csvText
         .split('\n')
         .map((l) => l.trim())
         .filter((l) => l.length > 0);
@@ -190,7 +184,6 @@ export default function AdminPage({ refreshData }: AdminPageProps) {
       }
 
       setMessage({ type: 'success', text: `Successfully added ${studentsToInsert.length} students.` });
-      setBulkText('');
       await refreshData();
       if (mainTab === 'logs') fetchLogs();
     } catch (err: any) {
@@ -200,8 +193,7 @@ export default function AdminPage({ refreshData }: AdminPageProps) {
     }
   };
 
-  const handleTimetableSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleTimetableSubmit = async (csvText: string) => {
     setIsLoading(true);
     setMessage(null);
     try {
@@ -216,7 +208,7 @@ export default function AdminPage({ refreshData }: AdminPageProps) {
 
       const profileMap = new Map((profiles || []).map((p) => [(p.full_name || '').toLowerCase(), p.id]));
 
-      let lines = timetableCSV.split('\n').map((l) => l.trim()).filter((l) => l.length > 0);
+      let lines = csvText.split('\n').map((l) => l.trim()).filter((l) => l.length > 0);
       if (lines.length > 0 && lines[0].toLowerCase().includes('day') && lines[0].toLowerCase().includes('subject')) {
         lines = lines.slice(1);
       }
@@ -250,7 +242,6 @@ export default function AdminPage({ refreshData }: AdminPageProps) {
       }
 
       setMessage({ type: 'success', text: `Successfully added ${timetableToInsert.length} timetable entries.` });
-      setTimetableCSV('');
       if (mainTab === 'logs') fetchLogs();
     } catch (err: any) {
       setMessage({ type: 'error', text: err.message || 'Failed to add timetable.' });
@@ -422,69 +413,12 @@ export default function AdminPage({ refreshData }: AdminPageProps) {
 
         {/* Single student form */}
         {mainTab === 'students' && studentTab === 'single' && (
-          <form onSubmit={handleSingleSubmit} className="space-y-5 max-w-md">
-            <div className="space-y-1.5">
-              <label className="eyebrow block">Full name</label>
-              <input type="text" required value={name} onChange={(e) => setName(e.target.value)} className="w-full px-4 py-3 bg-paper border border-cream-border rounded-xl focus:outline-none focus:ring-4 focus:ring-ochre/10 focus:border-ochre/60 font-medium text-ink" placeholder="e.g. John Doe" />
-            </div>
-            <div className="space-y-1.5">
-              <label className="eyebrow block">Roll number</label>
-              <input type="text" required value={rollNo} onChange={(e) => setRollNo(e.target.value)} className="w-full px-4 py-3 bg-paper border border-cream-border rounded-xl focus:outline-none focus:ring-4 focus:ring-ochre/10 focus:border-ochre/60 font-medium text-ink font-mono" placeholder="25FC304" />
-              <p className="text-[0.75rem] text-ink-muted mt-1.5">Division is inferred from the roll number automatically.</p>
-            </div>
-            <div className="space-y-1.5">
-              <label className="eyebrow block">Batch (optional)</label>
-              <input type="text" value={batch} onChange={(e) => setBatch(e.target.value)} className="w-full px-4 py-3 bg-paper border border-cream-border rounded-xl focus:outline-none focus:ring-4 focus:ring-ochre/10 focus:border-ochre/60 font-medium text-ink" placeholder="e.g. F1" />
-              <div className="mt-2 flex flex-wrap gap-1.5">
-                {getCorrectBatchesForDivision(getDivisionFromRollNo(rollNo)).map(b => (
-                  <button
-                    key={b}
-                    type="button"
-                    onClick={() => setBatch(b)}
-                    className={cn(
-                      "px-2.5 py-1 rounded-lg text-[0.65rem] font-bold border transition-all",
-                      batch === b 
-                        ? "bg-ochre text-white border-ochre" 
-                        : "bg-paper text-ink-muted border-cream-border hover:border-ochre/40"
-                    )}
-                  >
-                    {b}
-                  </button>
-                ))}
-                <button
-                  type="button"
-                  onClick={() => setBatch('')}
-                  className={cn(
-                    "px-2.5 py-1 rounded-lg text-[0.65rem] font-bold border transition-all",
-                    batch === '' 
-                      ? "bg-night text-white border-night" 
-                      : "bg-paper text-ink-muted border-cream-border hover:border-ochre/40"
-                  )}
-                >
-                  NONE
-                </button>
-              </div>
-            </div>
-            <button type="submit" disabled={isLoading} className="w-full bg-ochre hover:bg-ochre-deep text-white font-semibold py-3 px-4 rounded-xl disabled:opacity-50 flex items-center justify-center gap-2">
-              <UserPlus className="w-4 h-4" />
-              <span>{isLoading ? 'Adding…' : 'Add student'}</span>
-            </button>
-          </form>
+          <AddStudentForm isLoading={isLoading} onSubmit={handleSingleSubmit} />
         )}
 
         {/* Bulk student form */}
         {mainTab === 'students' && studentTab === 'bulk' && (
-          <form onSubmit={handleBulkSubmit} className="space-y-5">
-            <div className="space-y-1.5">
-              <label className="eyebrow block">CSV data</label>
-              <p className="text-[0.75rem] text-ink-muted mb-2">Format: <code className="font-mono bg-cream px-1.5 py-0.5 rounded">Name, RollNo, Batch</code>. One student per line.</p>
-              <textarea required value={bulkText} onChange={(e) => setBulkText(e.target.value)} rows={10} className="w-full px-4 py-3 bg-paper border border-cream-border rounded-xl focus:outline-none focus:ring-4 focus:ring-ochre/10 focus:border-ochre/60 font-mono text-sm text-ink" placeholder={"John Doe, 25FC304, F1\nJane Smith, 25FC205, F2"} />
-            </div>
-            <button type="submit" disabled={isLoading} className="bg-ochre hover:bg-ochre-deep text-white font-semibold py-3 px-6 rounded-xl disabled:opacity-50 flex items-center justify-center gap-2">
-              <Upload className="w-4 h-4" />
-              <span>{isLoading ? 'Processing…' : 'Upload students'}</span>
-            </button>
-          </form>
+          <BulkStudentUpload isLoading={isLoading} onSubmit={handleBulkSubmit} />
         )}
 
         {/* Timetable form */}
@@ -493,69 +427,12 @@ export default function AdminPage({ refreshData }: AdminPageProps) {
         )}
 
         {mainTab === 'timetable' && timetableTab === 'csv' && (
-          <form onSubmit={handleTimetableSubmit} className="space-y-5">
-            <div className="space-y-1.5">
-              <label className="eyebrow block">CSV data</label>
-              <p className="text-[0.75rem] text-ink-muted mb-2">
-                Format: <code className="font-mono bg-cream px-1.5 py-0.5 rounded">Day, Subject, Division, FacultyName, LectureNo, Batch</code>. Day is 1 (Monday) through 5 (Friday). Batch is optional.
-              </p>
-              <textarea required value={timetableCSV} onChange={(e) => setTimetableCSV(e.target.value)} rows={10} className="w-full px-4 py-3 bg-paper border border-cream-border rounded-xl focus:outline-none focus:ring-4 focus:ring-ochre/10 focus:border-ochre/60 font-mono text-sm text-ink" placeholder={"1, DEIC, C, unknown, 2, \n3, AC, A, unknown, 1, F1"} />
-            </div>
-            <button type="submit" disabled={isLoading} className="bg-ochre hover:bg-ochre-deep text-white font-semibold py-3 px-6 rounded-xl disabled:opacity-50 flex items-center justify-center gap-2">
-              <Upload className="w-4 h-4" />
-              <span>{isLoading ? 'Processing…' : 'Upload timetable'}</span>
-            </button>
-          </form>
+          <TimetableUpload isLoading={isLoading} onSubmit={handleTimetableSubmit} />
         )}
 
         {/* Logs table */}
         {mainTab === 'logs' && (
-          isLoadingLogs ? (
-            <div className="flex items-center justify-center py-16">
-              <div className="w-6 h-6 border-2 border-ink/10 border-t-ochre rounded-full animate-spin" />
-            </div>
-          ) : (
-            <div className="overflow-x-auto -mx-4 sm:-mx-0">
-              <table className="w-full text-left border-collapse">
-                <thead>
-                  <tr className="border-b border-cream-border">
-                    <th className="px-4 py-3 eyebrow">When</th>
-                    <th className="px-4 py-3 eyebrow">User</th>
-                    <th className="px-4 py-3 eyebrow">Category</th>
-                    <th className="px-4 py-3 eyebrow">Action</th>
-                    <th className="px-4 py-3 eyebrow">Details</th>
-                  </tr>
-                </thead>
-                <tbody className="text-sm divide-y divide-cream-border">
-                  {logs.length === 0 ? (
-                    <tr>
-                      <td colSpan={5} className="py-16 text-center text-ink-muted">
-                        No activity found{logCategory !== 'all' ? ` in the "${logCategory}" category` : ''}.
-                      </td>
-                    </tr>
-                  ) : (
-                    logs.map((log) => (
-                      <tr key={log.id} className="hover:bg-paper transition-colors">
-                        <td className="px-4 py-3 text-ink-muted tabular-nums whitespace-nowrap">
-                          {new Date(log.created_at).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
-                        </td>
-                        <td className="px-4 py-3 font-medium text-ink whitespace-nowrap">
-                          {log.profiles?.full_name || 'Unknown'}
-                        </td>
-                        <td className="px-4 py-3">
-                          <span className={cn('inline-flex items-center px-2.5 py-0.5 rounded-full text-[0.6875rem] font-semibold border uppercase tracking-wider', categoryBadge[log.category] || 'bg-cream text-ink border-cream-border')}>
-                            {log.category}
-                          </span>
-                        </td>
-                        <td className="px-4 py-3 font-medium text-ink">{log.action}</td>
-                        <td className="px-4 py-3 text-ink-muted max-w-[280px] truncate">{log.details || '-'}</td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
-          )
+          <AdminLogsTable logs={logs} isLoadingLogs={isLoadingLogs} logCategory={logCategory} />
         )}
       </div>
     </div>
