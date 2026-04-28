@@ -20,6 +20,9 @@ import { cn } from '../utils/attendance';
 import { motion, AnimatePresence } from 'motion/react';
 import type { Profile, LeaveRequest, LeaveStatus, LeaveType } from '../types';
 import { writeAdminLog } from '../utils/admin';
+import { Button } from '../components/ui/Button';
+import { Card } from '../components/ui/Card';
+import { Input } from '../components/ui/Input';
 
 interface LeaveRequestsPageProps {
   profile: Profile;
@@ -162,7 +165,7 @@ export default function LeaveRequestsPage({ profile, studentId }: LeaveRequestsP
         <p className="eyebrow">{isStudentView ? 'My requests' : 'Leave management'}</p>
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
           <div>
-            <h1 className="font-sans text-3xl md:text-4xl font-semibold text-ink tracking-tight text-balance">
+            <h1 className="font-display text-3xl md:text-4xl font-semibold text-ink tracking-tight text-balance">
               Leave <span className="text-ochre">requests</span>
             </h1>
             <p className="text-ink-muted mt-3 max-w-xl leading-relaxed text-sm sm:text-base">
@@ -197,16 +200,17 @@ export default function LeaveRequestsPage({ profile, studentId }: LeaveRequestsP
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: 'auto' }}
             exit={{ opacity: 0, height: 0 }}
-            className="overflow-hidden"
+            className="overflow-hidden mb-6"
           >
-            <form onSubmit={handleSubmitRequest} className="bg-card p-8 rounded-3xl border border-cream-border space-y-6">
+            <Card elevation="sm" className="border-none">
+              <form onSubmit={handleSubmitRequest} className="space-y-6">
               <div className="flex items-center gap-3 mb-2">
                 <div className="w-11 h-11 bg-cream rounded-xl flex items-center justify-center border border-cream-border">
                   <Send className="w-5 h-5 text-ink" />
                 </div>
                 <div>
                   <p className="eyebrow">Submit</p>
-                  <h2 className="font-sans text-xl font-semibold text-ink tracking-tight">New leave request</h2>
+                  <h2 className="font-display text-xl font-semibold text-ink tracking-tight">New leave request</h2>
                 </div>
               </div>
 
@@ -267,15 +271,17 @@ export default function LeaveRequestsPage({ profile, studentId }: LeaveRequestsP
                 />
               </div>
 
-              <button
+              <Button
                 type="submit"
                 disabled={formSubmitting}
-                className="bg-ochre hover:bg-ochre-deep text-white font-semibold py-3 px-6 rounded-xl disabled:opacity-50 flex items-center justify-center gap-2"
+                loading={formSubmitting}
+                className="w-full shadow-[0_8px_24px_-8px_rgba(37,99,235,0.45)]"
               >
                 <Send className="w-4 h-4" />
-                <span>{formSubmitting ? 'Submitting…' : 'Submit request'}</span>
-              </button>
+                <span>Submit request</span>
+              </Button>
             </form>
+            </Card>
           </motion.div>
         )}
       </AnimatePresence>

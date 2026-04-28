@@ -322,7 +322,7 @@ export default function App() {
       <Router>
         <div className="min-h-screen bg-transparent flex flex-col">
           <Navbar onLogout={handleLogout} profile={profile} />
-          <main className="flex-1 container mx-auto px-4 sm:px-6 py-10 max-w-7xl">
+          <main id="main-content" className="flex-1 container mx-auto px-4 sm:px-6 py-10 max-w-7xl">
             {!isLoading && <MissingAttendanceAlert students={students} profile={profile} refreshData={fetchStudents} />}
             <Suspense fallback={
               <div className="flex items-center justify-center py-20">

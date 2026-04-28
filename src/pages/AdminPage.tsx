@@ -16,6 +16,9 @@ import { cn, getCorrectBatchesForDivision } from '../utils/attendance';
 import type { AdminLog, AdminLogCategory } from '../types';
 import AdminTimetableEditor from '../components/AdminTimetableEditor';
 import { writeAdminLog } from '../utils/admin';
+import { Button } from '../components/ui/Button';
+import { Card } from '../components/ui/Card';
+import { Input } from '../components/ui/Input';
 
 function getDivisionFromRollNo(rollNo: string): DivisionId {
   if (rollNo && rollNo.length >= 5) {
@@ -286,7 +289,7 @@ export default function AdminPage({ refreshData }: AdminPageProps) {
     <div className="max-w-4xl mx-auto space-y-8">
       <header className="space-y-4">
         <p className="eyebrow">Administration</p>
-        <h1 className="font-sans text-3xl md:text-4xl font-semibold text-ink tracking-tight text-balance">
+        <h1 className="font-display text-3xl md:text-4xl font-semibold text-ink tracking-tight text-balance">
           School <span className="text-ochre">admin</span>
         </h1>
         <p className="text-ink-muted max-w-xl leading-relaxed text-sm sm:text-base">
@@ -315,7 +318,7 @@ export default function AdminPage({ refreshData }: AdminPageProps) {
         })}
       </div>
 
-      <div className="bg-card p-8 md:p-10 rounded-3xl border border-cream-border">
+      <Card elevation="sm" className="p-8 md:p-10 border-none">
         {/* Students tab header */}
         {mainTab === 'students' && (
           <>
@@ -325,7 +328,7 @@ export default function AdminPage({ refreshData }: AdminPageProps) {
               </div>
               <div>
                 <p className="eyebrow">Roster</p>
-                <h2 className="font-sans text-xl font-semibold text-ink tracking-tight">Add students</h2>
+                <h2 className="font-display text-xl font-semibold text-ink tracking-tight">Add students</h2>
               </div>
             </div>
             <div className="flex gap-1 mb-8 border-b border-cream-border">
@@ -354,7 +357,7 @@ export default function AdminPage({ refreshData }: AdminPageProps) {
               </div>
               <div>
                 <p className="eyebrow">Schedule</p>
-                <h2 className="font-sans text-xl font-semibold text-ink tracking-tight">Manage timetable</h2>
+                <h2 className="font-display text-xl font-semibold text-ink tracking-tight">Manage timetable</h2>
               </div>
             </div>
             <div className="flex gap-1 mb-8 border-b border-cream-border">
@@ -383,7 +386,7 @@ export default function AdminPage({ refreshData }: AdminPageProps) {
               </div>
               <div>
                 <p className="eyebrow">Audit trail</p>
-                <h2 className="font-sans text-xl font-semibold text-ink tracking-tight">Activity log</h2>
+                <h2 className="font-display text-xl font-semibold text-ink tracking-tight">Activity log</h2>
               </div>
             </div>
 
@@ -557,7 +560,7 @@ export default function AdminPage({ refreshData }: AdminPageProps) {
             </div>
           )
         )}
-      </div>
+      </Card>
     </div>
   );
 }

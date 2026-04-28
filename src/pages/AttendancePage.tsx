@@ -25,6 +25,9 @@ import { motion, AnimatePresence } from 'motion/react';
 import { supabase } from '../lib/supabase';
 import { useSearchParams } from 'react-router-dom';
 import { useSync } from '../context/SyncContext';
+import { Button } from '../components/ui/Button';
+import { Card } from '../components/ui/Card';
+import { Input } from '../components/ui/Input';
 
 interface AttendancePageProps {
   students: Student[];
@@ -478,7 +481,6 @@ export default function AttendancePage({
       await addToQueue('attendance', recordsToUpsert);
       setInitialAbsenteeIds(new Set(absenteeIds));
       setInitialRemarks({ ...remarks });
-      setIsOfflineSaved(true);
       setShowSuccess(true);
       setJustSaved(true);
       setTimeout(() => setJustSaved(false), 300);
@@ -524,7 +526,7 @@ export default function AttendancePage({
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
           <div>
             <p className="eyebrow">Mark attendance</p>
-            <h1 className="font-sans text-3xl md:text-4xl font-semibold text-ink mt-2 tracking-tight text-balance">
+            <h1 className="font-display text-3xl md:text-4xl font-semibold text-ink mt-2 tracking-tight text-balance">
               Today&apos;s{' '}
               <span className="text-ochre">lecture</span>
             </h1>
@@ -533,22 +535,19 @@ export default function AttendancePage({
               absent.
             </p>
           </div>
-          <button
+          <Button
+            size="lg"
             onClick={handleSave}
             disabled={
               isSaving ||
               availableSubjects.length === 0 ||
               validDivisions.length === 0
             }
-            className="bg-ochre hover:bg-ochre-deep text-white px-6 py-3.5 rounded-xl font-semibold shadow-[0_8px_24px_-8px_rgba(37,99,235,0.45)] flex items-center justify-center gap-2 active:scale-[0.99] disabled:opacity-60 disabled:cursor-not-allowed"
+            loading={isSaving}
           >
-            {isSaving ? (
-              <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-            ) : (
-              <Save className="w-4 h-4" />
-            )}
-            <span>{isSaving ? 'Saving…' : 'Save attendance'}</span>
-          </button>
+            <Save className="w-4 h-4" />
+            <span>Save attendance</span>
+          </Button>
         </div>
         <div className="rule-paper" />
       </header>
@@ -580,7 +579,7 @@ export default function AttendancePage({
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         {/* Control column */}
         <div className="lg:col-span-4 space-y-6">
-          <div className="bg-card p-6 rounded-3xl border border-cream-border space-y-6">
+          <Card elevation="sm" className="space-y-6 border-none">
             <div className="flex items-center justify-between">
               <p className="eyebrow">Lecture slot</p>
               <span className="text-[0.625rem] uppercase tracking-[0.2em] text-ink-muted">
@@ -747,22 +746,24 @@ export default function AttendancePage({
                 No lectures scheduled for {selectedSubject} on this date.
               </div>
             )}
-          </div>
+          </Card>
         </div>
 
         {/* Student grid */}
         <div className="lg:col-span-8 space-y-5">
           <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3 px-1 mb-1">
-            <h2 className="font-sans text-lg font-semibold text-ink tracking-tight">Roster</h2>
+            <h2 className="font-display text-lg font-semibold text-ink tracking-tight">Roster</h2>
             <div className="flex flex-wrap items-center gap-2.5">
-              <button
+              <Button
+                variant="primary"
+                size="sm"
                 onClick={() => setShowQuickEntry(true)}
                 disabled={availableSubjects.length === 0 || validDivisions.length === 0}
-                className="px-3 py-1.5 bg-ochre/10 text-ochre-deep hover:bg-ochre/20 rounded-lg text-[0.75rem] font-bold tracking-wide transition-colors flex items-center gap-1.5 border border-transparent hover:border-ochre/30 shadow-sm disabled:opacity-50 disabled:pointer-events-none"
+                className="bg-ochre/10 text-ochre-deep hover:bg-ochre/20 hover:text-ochre-deep border-transparent hover:border-ochre/30 text-[0.75rem] font-bold tracking-wide"
               >
                 <Zap className="w-3.5 h-3.5" />
                 QUICK ENTRY
-              </button>
+              </Button>
               <div className="px-3 py-1.5 bg-emerald-50 text-emerald-700 rounded-lg border border-emerald-200/70 text-[0.75rem] font-bold tracking-wide flex items-center gap-1.5 shadow-sm">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
                 {presentCount}/{filteredStudents.length} PRESENT
@@ -774,14 +775,14 @@ export default function AttendancePage({
             </div>
           </div>
 
-          <div className="relative group">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-[18px] h-[18px] text-ink/40 group-focus-within:text-ochre" />
-            <input
+          <div className="pb-2">
+            <Input
               type="text"
               placeholder="Search by name or roll number…"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-12 pr-4 py-4 bg-card border border-cream-border rounded-2xl focus:outline-none focus:ring-4 focus:ring-ochre/10 focus:border-ochre/60 font-medium text-ink placeholder:text-ink/30"
+              icon={<Search className="w-[18px] h-[18px]" />}
+              className="py-4 rounded-2xl bg-card border-cream-border focus:ring-ochre/10 focus:border-ochre/60 font-medium"
             />
           </div>
 

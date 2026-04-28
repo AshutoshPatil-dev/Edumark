@@ -26,6 +26,7 @@ import { useSync } from '../context/SyncContext';
 import { cn } from '../utils/attendance';
 import type { Profile } from '../types';
 import EdumarkLogo from './EdumarkLogo';
+import { Avatar } from './ui/Avatar';
 
 interface NavbarProps {
   onLogout: () => void;
@@ -113,7 +114,7 @@ export default function Navbar({ onLogout, profile }: NavbarProps) {
                 <EdumarkLogo size={38} variant={theme === 'dark' ? 'light' : 'dark'} />
                 <div className="hidden sm:flex flex-col leading-none">
                   <span
-                    className="font-sans text-[1.35rem] text-ink tracking-tight"
+                    className="font-display text-[1.35rem] text-ink tracking-tight"
                     style={{ fontWeight: 600 }}
                   >
                     Edu
@@ -122,7 +123,7 @@ export default function Navbar({ onLogout, profile }: NavbarProps) {
                     </span>
                     ark
                   </span>
-                  <span className="text-[0.625rem] uppercase tracking-[0.18em] text-ink-muted mt-1 font-sans">
+                  <span className="text-[0.625rem] uppercase tracking-[0.18em] text-ink-muted mt-1">
                     Class attendance
                   </span>
                 </div>
@@ -191,9 +192,7 @@ export default function Navbar({ onLogout, profile }: NavbarProps) {
                     {profile.roll_no ? ` · ${profile.roll_no}` : ''}
                   </span>
                 </div>
-                <div className="w-9 h-9 rounded-full bg-ochre/10 text-ochre-deep flex items-center justify-center font-bold text-[0.8125rem]">
-                  {initials}
-                </div>
+                <Avatar name={profile.full_name || 'User'} size="sm" />
               </div>
               <button
                 onClick={handleLogoutClick}
@@ -239,9 +238,7 @@ export default function Navbar({ onLogout, profile }: NavbarProps) {
               </button>
 
               <div className="pt-4 mt-2 border-t border-cream-border sm:hidden px-4 flex items-center gap-3">
-                <div className="w-9 h-9 rounded-full bg-gradient-to-br from-ochre/15 to-aqua/20 text-ochre flex items-center justify-center font-semibold text-sm border border-ochre/25 ring-1 ring-aqua/15">
-                  {initials}
-                </div>
+                <Avatar name={profile.full_name || 'User'} size="sm" />
                 <div>
                   <p className="text-sm font-semibold text-ink leading-none">
                     {profile.full_name || 'User'}

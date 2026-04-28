@@ -30,6 +30,7 @@ import { DIVISIONS, type DivisionId } from '../constants';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '../utils/attendance';
 import { useTheme } from '../context/ThemeContext';
+import { Card } from '../components/ui/Card';
 
 interface DashboardPageProps {
   students: Student[];
@@ -166,7 +167,7 @@ export default function DashboardPage({ students }: DashboardPageProps) {
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
           <div>
             <p className="eyebrow">Faculty dashboard</p>
-            <h1 className="font-sans text-3xl md:text-4xl font-semibold text-ink mt-2 tracking-tight text-balance">
+            <h1 className="font-display text-3xl md:text-4xl font-semibold text-ink mt-2 tracking-tight text-balance">
               Attendance{' '}
               <span className="text-gradient-cool">overview</span>
             </h1>
@@ -263,7 +264,7 @@ export default function DashboardPage({ students }: DashboardPageProps) {
               <div>
                 <p
                   className={cn(
-                    'font-sans font-bold tabular-nums text-4xl md:text-[2.75rem] leading-none tracking-tight',
+                    'font-display font-bold tabular-nums text-4xl md:text-[2.75rem] leading-none tracking-tight',
                     card.tone === 'risk' ? 'text-rose-700' : 'text-ink',
                   )}
                   style={{ fontWeight: 400 }}
@@ -284,14 +285,15 @@ export default function DashboardPage({ students }: DashboardPageProps) {
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="lg:col-span-3 bg-card p-8 rounded-3xl border border-cream-border"
+          className="lg:col-span-3"
         >
-          <div className="flex items-start justify-between mb-8">
-            <div>
-              <p className="eyebrow">Distribution</p>
-              <h2 className="font-sans text-xl font-semibold text-ink mt-1 tracking-tight">
-                Counts by behaviour tier
-              </h2>
+          <Card elevation="sm" className="h-full">
+            <div className="flex items-start justify-between mb-8">
+              <div>
+                <p className="eyebrow">Distribution</p>
+                <h2 className="font-display text-xl font-semibold text-ink mt-1 tracking-tight">
+                  Counts by behaviour tier
+                </h2>
             </div>
             <div className="flex items-center gap-4 text-[0.6875rem] uppercase tracking-[0.18em] text-ink-muted">
               {Object.entries(COLORS).map(([name, color]) => (
@@ -361,20 +363,22 @@ export default function DashboardPage({ students }: DashboardPageProps) {
               </BarChart>
             </ResponsiveContainer>
           </div>
+          </Card>
         </motion.div>
 
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.15 }}
-          className="lg:col-span-2 bg-card text-ink p-8 rounded-3xl border border-cream-border border-l-4 border-l-aqua bg-gradient-to-br from-card to-aqua/[0.06] shadow-sm"
+          className="lg:col-span-2"
         >
-          <div className="flex items-start justify-between mb-6">
-            <div>
-              <p className="eyebrow text-ink-muted">Intervention</p>
-              <h2 className="font-sans text-xl font-semibold text-ink mt-1 tracking-tight">
-                Students to check in
-              </h2>
+          <Card elevation="sm" className="h-full border-l-4 border-l-aqua bg-gradient-to-br from-card to-aqua/[0.06]">
+            <div className="flex items-start justify-between mb-6">
+              <div>
+                <p className="eyebrow text-ink-muted">Intervention</p>
+                <h2 className="font-display text-xl font-semibold text-ink mt-1 tracking-tight">
+                  Students to check in
+                </h2>
             </div>
             <Link
               to="/students"
@@ -408,7 +412,7 @@ export default function DashboardPage({ students }: DashboardPageProps) {
                   <div className="text-right">
                     <p
                       className={cn(
-                        'font-sans text-xl font-semibold tabular-nums leading-none',
+                        'font-display text-xl font-semibold tabular-nums leading-none',
                         student.status === 'Excellent' ? 'text-emerald-600' :
                         student.status === 'Good' ? 'text-ochre' :
                         student.status === 'Risky' ? 'text-amber-600' : 
@@ -433,6 +437,7 @@ export default function DashboardPage({ students }: DashboardPageProps) {
               </div>
             )}
           </div>
+          </Card>
         </motion.div>
       </div>
 
