@@ -1,7 +1,7 @@
 {
-  "name": "EduMark",
+  "name": "EduMark ERP System",
   "short_name": "EduMark",
-  "description": "Comprehensive attendance management for schools and colleges.",
+  "description": "EduMark ERP System - comprehensive attendance management, timetable scheduling, and student tracking for schools and colleges.",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#ffffff",
