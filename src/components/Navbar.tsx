@@ -21,6 +21,7 @@ import {
   Cloud,
   CloudOff,
   RefreshCw,
+  Megaphone,
 } from 'lucide-react';
 import { useSync } from '../context/SyncContext';
 import { cn } from '../utils/attendance';
@@ -45,6 +46,7 @@ export default function Navbar({ onLogout, profile }: NavbarProps) {
     { path: '/students', label: 'Students', icon: Users },
     { path: '/report', label: 'Reports', icon: FileBarChart },
     { path: '/leaves', label: 'Leaves', icon: FileText },
+    { path: '/announcements', label: 'Notices', icon: Megaphone },
   ];
 
   if (profile.role === 'admin') {
@@ -54,6 +56,7 @@ export default function Navbar({ onLogout, profile }: NavbarProps) {
   const studentItems = [
     { path: '/', label: 'My Record', icon: Users },
     { path: '/leaves', label: 'My Leaves', icon: FileText },
+    { path: '/announcements', label: 'Notices', icon: Megaphone },
   ];
 
   const navItems =
@@ -95,8 +98,8 @@ export default function Navbar({ onLogout, profile }: NavbarProps) {
       <div className="sticky top-0 z-50 w-full pt-4 pb-2 px-4 sm:px-6 pointer-events-none">
         <nav className="max-w-7xl mx-auto bg-card/85 text-ink border border-cream-border/80 shadow-md shadow-ink/5 backdrop-blur-xl rounded-2xl pointer-events-auto transition-all">
           <div className="px-4 sm:px-6">
-            <div className="flex items-center justify-between h-14 sm:h-[60px]">
-              <div className="flex items-center gap-3">
+            <div className="flex items-center justify-between h-14 sm:h-[60px] gap-2 md:gap-4 lg:gap-8">
+              <div className="flex items-center gap-3 shrink-0">
               <button
                 onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
                 aria-label="Toggle navigation"
@@ -129,8 +132,8 @@ export default function Navbar({ onLogout, profile }: NavbarProps) {
               </Link>
             </div>
 
-            <div className="hidden md:flex items-center">
-              <div className="flex items-center gap-1">
+            <div className="hidden md:flex items-center flex-1 justify-center">
+              <div className="flex items-center gap-0.5 lg:gap-1">
                 {navItems.map((item) => {
                   const Icon = item.icon;
                   const isActive = location.pathname === item.path;
@@ -140,7 +143,7 @@ export default function Navbar({ onLogout, profile }: NavbarProps) {
                       to={item.path}
                       onClick={handleNavClick}
                       className={cn(
-                        'flex items-center gap-2 px-3.5 py-2 rounded-xl text-[0.875rem] transition-colors',
+                        'flex items-center gap-1.5 lg:gap-2 px-2.5 lg:px-3.5 py-2 rounded-xl text-[0.8125rem] lg:text-[0.875rem] transition-colors whitespace-nowrap shrink-0',
                         isActive
                           ? 'bg-ink text-paper shadow-md font-semibold'
                           : 'text-ink-muted hover:text-ink hover:bg-cream-soft font-medium'
@@ -154,9 +157,9 @@ export default function Navbar({ onLogout, profile }: NavbarProps) {
               </div>
             </div>
 
-            <div className="flex items-center gap-1 sm:gap-2 md:gap-3">
+            <div className="flex items-center gap-1 sm:gap-2 md:gap-3 shrink-0">
               {/* Sync Status Indicator */}
-              <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-paper/50 border border-cream-border/50 mr-1">
+              <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-paper/50 border border-cream-border/50">
                 {isOnline ? (
                   <div className="flex items-center gap-2">
                     {pendingCount > 0 ? (
@@ -199,7 +202,7 @@ export default function Navbar({ onLogout, profile }: NavbarProps) {
                 onClick={handleLogoutClick}
                 title="Sign out"
                 aria-label="Sign out"
-                className="hidden md:inline-flex items-center gap-2 px-3 py-2 rounded-lg text-[0.8125rem] font-medium text-ink-muted hover:text-ink hover:bg-cream-soft"
+                className="hidden md:inline-flex items-center gap-2 px-3 py-2 rounded-lg text-[0.8125rem] font-medium text-rose-500/70 hover:text-rose-600 hover:bg-rose-500/10 transition-colors"
               >
                 <LogOut className="w-4 h-4" />
               </button>
@@ -232,7 +235,7 @@ export default function Navbar({ onLogout, profile }: NavbarProps) {
 
               <button
                 onClick={handleLogoutClick}
-                className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-ink-muted hover:text-ink hover:bg-paper mt-1"
+                className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-rose-500/70 hover:text-rose-600 hover:bg-rose-500/10 transition-colors mt-1"
               >
                 <LogOut className="w-[18px] h-[18px]" />
                 <span>Sign out</span>

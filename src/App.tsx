@@ -25,7 +25,7 @@ const StudentPage = lazy(() => import('./pages/StudentPage'));
 const ReportPage = lazy(() => import('./pages/ReportPage'));
 const AdminPage = lazy(() => import('./pages/AdminPage'));
 const LeaveRequestsPage = lazy(() => import('./pages/LeaveRequestsPage'));
-
+const AnnouncementsPage = lazy(() => import('./pages/AnnouncementsPage'));
 
 export default function App() {
   const [students, setStudents] = useState<Student[]>([]);
@@ -340,6 +340,7 @@ export default function App() {
                     <Route path="/students" element={<StudentPage students={students} isLoading={isLoading} />} />
                     <Route path="/report" element={<ReportPage students={students} />} />
                     <Route path="/leaves" element={<LeaveRequestsPage profile={profile} />} />
+                    <Route path="/announcements" element={<AnnouncementsPage profile={profile} students={students} />} />
                     {profile.role === 'admin' && (
                       <Route path="/admin" element={<AdminPage refreshData={fetchStudents} />} />
                     )}
@@ -349,6 +350,7 @@ export default function App() {
                   <>
                     <Route path="/" element={<StudentPage students={students.filter(s => s.rollNo === profile.roll_no)} isStudentView={true} isLoading={isLoading} />} />
                     <Route path="/leaves" element={<LeaveRequestsPage profile={profile} studentId={students.find(s => s.rollNo === profile.roll_no)?.id} />} />
+                    <Route path="/announcements" element={<AnnouncementsPage profile={profile} students={students} />} />
                     <Route path="*" element={<Navigate to="/" replace />} />
                   </>
                 )}

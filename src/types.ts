@@ -104,3 +104,21 @@ export interface AdminLog {
     full_name: string | null;
   };
 }
+
+export type AnnouncementType = 'announcement' | 'assignment';
+
+export interface Announcement {
+  id: string;
+  title: string;
+  content: string;
+  type: AnnouncementType;
+  faculty_id: string;
+  subject_id: string;
+  target_divisions: string[] | null;
+  target_batches: string[] | null;
+  created_at: string;
+  due_date?: string;
+  profiles?: {
+    full_name: string | null;
+  };
+}
