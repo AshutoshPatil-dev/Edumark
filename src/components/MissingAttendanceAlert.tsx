@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
-import { AlertCircle, CheckCircle2, XCircle, Clock, ChevronDown, ChevronUp, ClipboardCheck } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
+import { AlertCircle, CheckCircle2, XCircle, Clock, ChevronDown, ChevronUp, ClipboardCheck, BellOff, Loader2 } from 'lucide-react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import type { Student, Profile, TimetableEntry } from '../types';
 import { useSync } from '../context/SyncContext';
@@ -12,6 +13,7 @@ interface MissingAttendanceAlertProps {
 }
 
 interface MissingEntry {
+  id: string;
   date: string;
   subjectId: string;
   division: string;
@@ -21,10 +23,18 @@ interface MissingEntry {
 
 export default function MissingAttendanceAlert({ students, profile, refreshData }: MissingAttendanceAlertProps) {
   const navigate = useNavigate();
+  const location = useLocation();
   const { isOnline, addToQueue } = useSync();
   const [missingList, setMissingList] = useState<MissingEntry[]>([]);
   const [expanded, setExpanded] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
+  const [loadingKey, setLoadingKey] = useState<string | null>(null);
+  const [hiddenForSession, setHiddenForSession] = useState(
+    sessionStorage.getItem(`edumark_hide_missing_alert_${profile.id}`) === 'true'
+  );
+
+  useEffect(() => {
+    setExpanded(false);
+  }, [location.pathname, location.search]);
 
   useEffect(() => {
     if (profile.role !== 'faculty' && profile.role !== 'admin') return;
@@ -78,7 +88,7 @@ export default function MissingAttendanceAlert({ students, profile, refreshData 
         }
       }
 
-      const ignored = JSON.parse(localStorage.getItem(`edumark_ignored_attendance_${profile.id}`) || '[]');
+      const ignored = JSON.parse(sessionStorage.getItem(`edumark_ignored_attendance_${profile.id}`) || '[]');
       const missing: MissingEntry[] = [];
 
       pastDays.forEach(day => {
@@ -136,6 +146,7 @@ export default function MissingAttendanceAlert({ students, profile, refreshData 
 
           if (!hasAttendance && studentsInDiv.length > 0) {
             missing.push({
+              id: `${day.date}_${t.subject_id}_${t.division}_${t.lecture_no}_${t.batch || ''}_${Math.random().toString(36).substr(2, 9)}`,
               date: day.date,
               subjectId: t.subject_id,
               division: t.division,
@@ -154,16 +165,18 @@ export default function MissingAttendanceAlert({ students, profile, refreshData 
   }, [students, profile]);
 
   const handleIgnore = (entry: MissingEntry) => {
-    const key = `${entry.date}_${entry.subjectId}_${entry.division}_${entry.lectureNo}_${entry.batch || ''}`;
-    const ignored = JSON.parse(localStorage.getItem(`edumark_ignored_attendance_${profile.id}`) || '[]');
-    ignored.push(key);
-    localStorage.setItem(`edumark_ignored_attendance_${profile.id}`, JSON.stringify(ignored));
+    const storageKey = `${entry.date}_${entry.subjectId}_${entry.division}_${entry.lectureNo}_${entry.batch || ''}`;
+    const ignored = JSON.parse(sessionStorage.getItem(`edumark_ignored_attendance_${profile.id}`) || '[]');
+    if (!ignored.includes(storageKey)) {
+      ignored.push(storageKey);
+      sessionStorage.setItem(`edumark_ignored_attendance_${profile.id}`, JSON.stringify(ignored));
+    }
 
-    setMissingList(prev => prev.filter(m => !(m.date === entry.date && m.subjectId === entry.subjectId && m.division === entry.division && m.lectureNo === entry.lectureNo && m.batch === entry.batch)));
+    setMissingList(prev => prev.filter(m => m.id !== entry.id));
   };
 
   const handleLogAction = async (entry: MissingEntry, action: string) => {
-    setIsLoading(true);
+    setLoadingKey(entry.id);
     const details = [
       entry.subjectId,
       `Div ${entry.division}`,
@@ -182,17 +195,17 @@ export default function MissingAttendanceAlert({ students, profile, refreshData 
 
       if (error) throw error;
 
-      setMissingList(prev => prev.filter(m => !(m.date === entry.date && m.subjectId === entry.subjectId && m.division === entry.division && m.lectureNo === entry.lectureNo && m.batch === entry.batch)));
+      setMissingList(prev => prev.filter(m => m.id !== entry.id));
     } catch (err: any) {
       console.error('Error logging action:', err);
       alert('Failed to log action: ' + err.message);
     } finally {
-      setIsLoading(false);
+      setLoadingKey(null);
     }
   };
 
   const handleMarkAllPresent = async (entry: MissingEntry) => {
-    setIsLoading(true);
+    setLoadingKey(entry.id);
     try {
       const studentsInDiv = students.filter(s => s.division === entry.division && (!entry.batch || s.batch === entry.batch));
       const records = studentsInDiv.map(student => ({
@@ -206,14 +219,14 @@ export default function MissingAttendanceAlert({ students, profile, refreshData 
 
       if (!isOnline) {
         await addToQueue('attendance', records);
-        const key = `${entry.date}_${entry.subjectId}_${entry.division}_${entry.lectureNo}_${entry.batch || ''}`;
-        const ignored = JSON.parse(localStorage.getItem(`edumark_ignored_attendance_${profile.id}`) || '[]');
-        if (!ignored.includes(key)) {
-          ignored.push(key);
-          localStorage.setItem(`edumark_ignored_attendance_${profile.id}`, JSON.stringify(ignored));
+        const storageKey = `${entry.date}_${entry.subjectId}_${entry.division}_${entry.lectureNo}_${entry.batch || ''}`;
+        const ignored = JSON.parse(sessionStorage.getItem(`edumark_ignored_attendance_${profile.id}`) || '[]');
+        if (!ignored.includes(storageKey)) {
+          ignored.push(storageKey);
+          sessionStorage.setItem(`edumark_ignored_attendance_${profile.id}`, JSON.stringify(ignored));
         }
-        setMissingList(prev => prev.filter(m => !(m.date === entry.date && m.subjectId === entry.subjectId && m.division === entry.division && m.lectureNo === entry.lectureNo && m.batch === entry.batch)));
-        setIsLoading(false);
+        setMissingList(prev => prev.filter(m => m.id !== entry.id));
+        setLoadingKey(null);
         return;
       }
 
@@ -223,23 +236,24 @@ export default function MissingAttendanceAlert({ students, profile, refreshData 
 
       if (error) throw error;
 
-      const key = `${entry.date}_${entry.subjectId}_${entry.division}_${entry.lectureNo}_${entry.batch || ''}`;
-      const ignored = JSON.parse(localStorage.getItem(`edumark_ignored_attendance_${profile.id}`) || '[]');
-      if (!ignored.includes(key)) {
-        ignored.push(key);
-        localStorage.setItem(`edumark_ignored_attendance_${profile.id}`, JSON.stringify(ignored));
+      const storageKey = `${entry.date}_${entry.subjectId}_${entry.division}_${entry.lectureNo}_${entry.batch || ''}`;
+      const ignored = JSON.parse(sessionStorage.getItem(`edumark_ignored_attendance_${profile.id}`) || '[]');
+      if (!ignored.includes(storageKey)) {
+        ignored.push(storageKey);
+        sessionStorage.setItem(`edumark_ignored_attendance_${profile.id}`, JSON.stringify(ignored));
       }
 
+      setMissingList(prev => prev.filter(m => m.id !== entry.id));
       await refreshData();
     } catch (err: any) {
       console.error('Error marking all present:', err);
       alert('Failed to mark attendance: ' + err.message);
     } finally {
-      setIsLoading(false);
+      setLoadingKey(null);
     }
   };
 
-  if (missingList.length === 0) return null;
+  if (missingList.length === 0 || hiddenForSession) return null;
 
   return (
     <div className="bg-card border border-cream-border rounded-3xl p-5 md:p-6 mb-8 relative overflow-hidden">
@@ -258,81 +272,108 @@ export default function MissingAttendanceAlert({ students, profile, refreshData 
             </p>
           </div>
         </div>
-        <button
-          onClick={() => setExpanded(!expanded)}
-          className="flex items-center gap-1.5 text-ink hover:text-ochre-deep bg-cream hover:bg-cream-soft border border-cream-border px-3 py-2 rounded-xl text-[0.8125rem] font-semibold shrink-0"
-        >
-          <span>{expanded ? 'Hide' : 'Review'}</span>
-          {expanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-        </button>
+        <div className="flex items-center gap-2 shrink-0">
+          <button
+            onClick={() => {
+              sessionStorage.setItem(`edumark_hide_missing_alert_${profile.id}`, 'true');
+              setHiddenForSession(true);
+            }}
+            className="flex items-center gap-1.5 text-ink-muted hover:text-ink hover:bg-cream-soft px-3 py-2 rounded-xl text-[0.8125rem] font-medium transition-colors"
+            title="Hide for this session"
+          >
+            <BellOff className="w-4 h-4" />
+            <span className="hidden sm:inline">Later</span>
+          </button>
+          <button
+            onClick={() => setExpanded(!expanded)}
+            className="flex items-center gap-1.5 text-ink hover:text-ochre-deep bg-cream hover:bg-cream-soft border border-cream-border px-3 py-2 rounded-xl text-[0.8125rem] font-semibold transition-colors active:scale-95"
+          >
+            <span>{expanded ? 'Hide' : 'Review'}</span>
+            {expanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+          </button>
+        </div>
       </div>
 
       {expanded && (
         <div className="mt-5 space-y-2">
-          {missingList.map(m => {
-            const [y, month, d] = m.date.split('-');
-            const dateObj = new Date(parseInt(y), parseInt(month) - 1, parseInt(d));
-            const formattedDate = dateObj.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+          <AnimatePresence initial={false}>
+            {missingList.map(m => {
+              const [y, month, d] = m.date.split('-');
+              const dateObj = new Date(parseInt(y), parseInt(month) - 1, parseInt(d));
+              const formattedDate = dateObj.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+              const itemKey = m.id;
+              const isItemLoading = loadingKey === itemKey;
+              const isAnyLoading = loadingKey !== null;
 
-            return (
-              <div key={`${m.date}_${m.subjectId}_${m.division}_${m.lectureNo}_${m.batch || ''}`} className="flex flex-col sm:flex-row sm:items-center justify-between bg-paper p-4 rounded-2xl border border-cream-border gap-3">
-                <div className="flex items-center gap-3">
-                  <span className="w-1.5 h-1.5 rounded-full bg-ochre shrink-0" />
-                  <div>
-                    <span className="font-semibold text-ink">{formattedDate}</span>
-                    <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
-                      <span className="text-ink text-[0.6875rem] font-semibold px-2 py-0.5 bg-cream border border-cream-border rounded">{m.subjectId}</span>
-                      <span className="text-ink text-[0.6875rem] font-semibold px-2 py-0.5 bg-ochre/10 border border-ochre/30 rounded">Div {m.division}</span>
-                      {m.batch && <span className="text-ochre-deep text-[0.6875rem] font-semibold px-2 py-0.5 bg-ochre/10 border border-ochre/30 rounded">Batch {m.batch}</span>}
-                      <span className="text-ink-muted text-[0.6875rem] font-medium">Lecture {m.lectureNo}</span>
+              return (
+                <motion.div
+                  key={itemKey}
+                  layout
+                  initial={{ opacity: 0, height: 0, scale: 0.95, marginBottom: 0 }}
+                  animate={{ opacity: 1, height: 'auto', scale: 1, marginBottom: 8 }}
+                  exit={{ opacity: 0, height: 0, scale: 0.95, marginBottom: 0, overflow: 'hidden' }}
+                  transition={{ duration: 0.2 }}
+                  className="flex flex-col sm:flex-row sm:items-center justify-between bg-paper p-4 rounded-2xl border border-cream-border gap-3"
+                >
+                  <div className="flex items-center gap-3">
+                    <span className="w-1.5 h-1.5 rounded-full bg-ochre shrink-0" />
+                    <div>
+                      <span className="font-semibold text-ink">{formattedDate}</span>
+                      <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
+                        <span className="text-ink text-[0.6875rem] font-semibold px-2 py-0.5 bg-cream border border-cream-border rounded">{m.subjectId}</span>
+                        <span className="text-ink text-[0.6875rem] font-semibold px-2 py-0.5 bg-ochre/10 border border-ochre/30 rounded">Div {m.division}</span>
+                        {m.batch && <span className="text-ochre-deep text-[0.6875rem] font-semibold px-2 py-0.5 bg-ochre/10 border border-ochre/30 rounded">Batch {m.batch}</span>}
+                        <span className="text-ink-muted text-[0.6875rem] font-medium">Lecture {m.lectureNo}</span>
+                      </div>
                     </div>
                   </div>
-                </div>
-                <div className="flex flex-wrap gap-2 mt-2 sm:mt-0">
-                  <button
-                    onClick={() => {
-                      const params = new URLSearchParams({
-                        subject: m.subjectId,
-                        division: m.division,
-                        date: m.date,
-                        lecture: String(m.lectureNo),
-                      });
-                      if (m.batch) params.set('batch', m.batch);
-                      navigate(`/attendance?${params.toString()}`);
-                    }}
-                    className="flex items-center gap-1.5 text-[0.8125rem] bg-night text-white border border-night px-3.5 py-2 rounded-xl hover:bg-night-soft font-semibold"
-                  >
-                    <ClipboardCheck className="w-3.5 h-3.5" />
-                    <span>Mark now</span>
-                  </button>
-                  <button
-                    onClick={() => handleMarkAllPresent(m)}
-                    disabled={isLoading}
-                    className="flex items-center gap-1.5 text-[0.8125rem] bg-ochre text-white border border-ochre px-3.5 py-2 rounded-xl hover:bg-ochre-deep font-semibold disabled:opacity-50"
-                  >
-                    <CheckCircle2 className="w-3.5 h-3.5" />
-                    <span>All present</span>
-                  </button>
-                  <button
-                    onClick={() => handleLogAction(m, 'Holiday / No Lecture')}
-                    disabled={isLoading}
-                    className="flex items-center gap-1.5 text-[0.8125rem] bg-card text-ink border border-cream-border px-3.5 py-2 rounded-xl hover:border-ochre/40 font-semibold disabled:opacity-50"
-                  >
-                    <XCircle className="w-3.5 h-3.5" />
-                    <span>Holiday</span>
-                  </button>
-                  <button
-                    onClick={() => handleIgnore(m)}
-                    disabled={isLoading}
-                    className="flex items-center gap-1.5 text-[0.8125rem] bg-card text-ink-muted border border-cream-border px-3.5 py-2 rounded-xl hover:text-ink font-semibold disabled:opacity-50"
-                  >
-                    <Clock className="w-3.5 h-3.5" />
-                    <span>Later</span>
-                  </button>
-                </div>
-              </div>
-            );
-          })}
+                  <div className="flex flex-wrap gap-2 mt-2 sm:mt-0">
+                    <button
+                      onClick={() => {
+                        const params = new URLSearchParams({
+                          subject: m.subjectId,
+                          division: m.division,
+                          date: m.date,
+                          lecture: String(m.lectureNo),
+                        });
+                        if (m.batch) params.set('batch', m.batch);
+                        navigate(`/attendance?${params.toString()}`);
+                      }}
+                      disabled={isAnyLoading}
+                      className="flex items-center gap-1.5 text-[0.8125rem] bg-night text-white border border-night px-3.5 py-2 rounded-xl hover:bg-night-soft font-semibold transition-all active:scale-95 disabled:opacity-50 disabled:active:scale-100"
+                    >
+                      <ClipboardCheck className="w-3.5 h-3.5" />
+                      <span>Mark now</span>
+                    </button>
+                    <button
+                      onClick={() => handleMarkAllPresent(m)}
+                      disabled={isAnyLoading}
+                      className="flex items-center gap-1.5 text-[0.8125rem] bg-ochre text-white border border-ochre px-3.5 py-2 rounded-xl hover:bg-ochre-deep font-semibold transition-all active:scale-95 disabled:opacity-50 disabled:active:scale-100"
+                    >
+                      {isItemLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <CheckCircle2 className="w-3.5 h-3.5" />}
+                      <span>All present</span>
+                    </button>
+                    <button
+                      onClick={() => handleLogAction(m, 'Holiday / No Lecture')}
+                      disabled={isAnyLoading}
+                      className="flex items-center gap-1.5 text-[0.8125rem] bg-card text-ink border border-cream-border px-3.5 py-2 rounded-xl hover:border-ochre/40 font-semibold transition-all active:scale-95 disabled:opacity-50 disabled:active:scale-100"
+                    >
+                      <XCircle className="w-3.5 h-3.5" />
+                      <span>Holiday</span>
+                    </button>
+                    <button
+                      onClick={() => handleIgnore(m)}
+                      disabled={isAnyLoading}
+                      className="flex items-center gap-1.5 text-[0.8125rem] bg-card text-ink-muted border border-cream-border px-3.5 py-2 rounded-xl hover:text-ink font-semibold transition-all active:scale-95 disabled:opacity-50 disabled:active:scale-100"
+                    >
+                      <Clock className="w-3.5 h-3.5" />
+                      <span>Later</span>
+                    </button>
+                  </div>
+                </motion.div>
+              );
+            })}
+          </AnimatePresence>
         </div>
       )}
     </div>

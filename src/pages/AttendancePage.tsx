@@ -17,6 +17,7 @@ import {
   X,
   ChevronDown,
   MessageSquare,
+  Lightbulb,
 } from 'lucide-react';
 import { SUBJECTS, DIVISIONS, type SubjectId, type DivisionId } from '../constants';
 import type { Student, Profile } from '../types';
@@ -49,10 +50,15 @@ export default function AttendancePage({
           (sub === 'DEIC-T' && profile.assigned_subjects.includes('DEIC')),
       );
 
+  const initialSubject = searchParams.get('subject') as SubjectId;
+  const initialDate = searchParams.get('date');
+  const initialDiv = searchParams.get('division') as DivisionId;
+  const initialLec = searchParams.get('lecture');
+  const initialBatch = searchParams.get('batch');
+
   const [selectedSubject, setSelectedSubject] = useState<SubjectId>(
-    availableSubjects[0] || SUBJECTS[0],
+    (initialSubject && availableSubjects.includes(initialSubject)) ? initialSubject : (availableSubjects[0] || SUBJECTS[0]),
   );
-  const [lectureNo, setLectureNo] = useState(1);
 
   const getLocalDateString = () => {
     const d = new Date();
@@ -62,7 +68,7 @@ export default function AttendancePage({
     return `${year}-${month}-${day}`;
   };
 
-  const [date, setDate] = useState(getLocalDateString());
+  const [date, setDate] = useState(initialDate || getLocalDateString());
   const [absenteeIds, setAbsenteeIds] = useState<Set<string>>(new Set());
   const [initialAbsenteeIds, setInitialAbsenteeIds] = useState<Set<string>>(new Set());
   const [remarks, setRemarks] = useState<Record<string, string>>({});
@@ -74,12 +80,15 @@ export default function AttendancePage({
   const [justSaved, setJustSaved] = useState(false);
   const [showQuickEntry, setShowQuickEntry] = useState(false);
 
-  const [selectedDivision, setSelectedDivision] = useState<DivisionId>('A');
-  const [validDivisions, setValidDivisions] = useState<DivisionId[]>([...DIVISIONS]);
-  const [selectedBatch, setSelectedBatch] = useState<string>('');
+  const [selectedDivision, setSelectedDivision] = useState<DivisionId>(
+    (initialDiv && DIVISIONS.includes(initialDiv)) ? initialDiv : 'A'
+  );
+  const [validDivisions, setValidDivisions] = useState<DivisionId[]>([]);
+  const [selectedBatch, setSelectedBatch] = useState<string>(initialBatch || '');
   const [validBatches, setValidBatches] = useState<string[]>([]);
-  const [validLectures, setValidLectures] = useState<number[]>([1, 2, 3, 4, 5, 6]);
+  const [validLectures, setValidLectures] = useState<number[]>([]);
   const [, setIsLoadingAttendance] = useState(false);
+  const [isFetchingTimetable, setIsFetchingTimetable] = useState(true);
 
   const [quickEntryInput, setQuickEntryInput] = useState('');
   const [quickEntryError, setQuickEntryError] = useState<string | null>(null);
@@ -98,29 +107,12 @@ export default function AttendancePage({
     return () => document.removeEventListener('mousedown', handleSubjectOutside);
   }, []);
 
-  // Feature 3: Pre-fill form from URL query params (e.g. from "Mark Now" button)
+  // Clear query params if present so a refresh doesn't keep them forever
   useEffect(() => {
-    const qSubject = searchParams.get('subject') as SubjectId | null;
-    const qDivision = searchParams.get('division') as DivisionId | null;
-    const qDate = searchParams.get('date');
-    const qLecture = searchParams.get('lecture');
-    const qBatch = searchParams.get('batch');
-
-    if (qSubject || qDivision || qDate || qLecture) {
-      if (qSubject && availableSubjects.includes(qSubject)) {
-        setSelectedSubject(qSubject);
-      }
-      if (qDate) setDate(qDate);
-      if (qDivision && DIVISIONS.includes(qDivision)) {
-        setSelectedDivision(qDivision);
-      }
-      if (qLecture) setLectureNo(parseInt(qLecture, 10));
-      if (qBatch) setSelectedBatch(qBatch);
-
-      // Clear the query params so a page refresh doesn't re-apply them
+    if (initialSubject || initialDate || initialDiv || initialLec) {
       setSearchParams({}, { replace: true });
     }
-  }, []); // only on mount
+  }, [initialSubject, initialDate, initialDiv, initialLec, setSearchParams]);
 
   useEffect(() => {
     (window as any).hasUnsavedAttendanceChanges = hasUnsavedChanges;
@@ -269,10 +261,14 @@ export default function AttendancePage({
     }
   }, [isPractical]);
 
+  const [lectureNo, setLectureNo] = useState(initialLec ? parseInt(initialLec, 10) : 1);
+
   useEffect(() => {
+    let ignore = false;
     const fetchValidDivisions = async () => {
-      const d = new Date(date);
-      const dayOfWeek = d.getDay();
+      const [y, m, d] = date.split('-');
+      const dObj = new Date(parseInt(y, 10), parseInt(m, 10) - 1, parseInt(d, 10));
+      const dayOfWeek = dObj.getDay();
 
       let query = supabase
         .from('timetable')
@@ -285,6 +281,7 @@ export default function AttendancePage({
       }
 
       const { data, error } = await query;
+      if (ignore) return;
 
       if (!error && data && data.length > 0) {
         const uniqueDivs = Array.from(new Set(data.map((d) => d.division as DivisionId))).sort();
@@ -295,12 +292,16 @@ export default function AttendancePage({
       } else {
         setValidDivisions([]);
       }
+      setIsFetchingTimetable(false);
     };
 
+    setIsFetchingTimetable(true);
     fetchValidDivisions();
-  }, [date, selectedSubject]);
+    return () => { ignore = true; };
+  }, [date, selectedSubject, profile.id, profile.role]);
 
   useEffect(() => {
+    let ignore = false;
     const fetchValidBatches = async () => {
       if (!isPractical) {
         setValidBatches([]);
@@ -308,8 +309,9 @@ export default function AttendancePage({
         return;
       }
 
-      const d = new Date(date);
-      const dayOfWeek = d.getDay();
+      const [y, m, d] = date.split('-');
+      const dObj = new Date(parseInt(y, 10), parseInt(m, 10) - 1, parseInt(d, 10));
+      const dayOfWeek = dObj.getDay();
 
       let query = supabase
         .from('timetable')
@@ -324,6 +326,7 @@ export default function AttendancePage({
       }
 
       const { data, error } = await query;
+      if (ignore) return;
 
       if (!error && data && data.length > 0) {
         const allowedBatches = new Set(getCorrectBatchesForDivision(selectedDivision));
@@ -345,12 +348,15 @@ export default function AttendancePage({
     };
 
     fetchValidBatches();
-  }, [date, selectedSubject, selectedDivision, isPractical]);
+    return () => { ignore = true; };
+  }, [date, selectedSubject, selectedDivision, isPractical, profile.id, profile.role]);
 
   useEffect(() => {
+    let ignore = false;
     const fetchValidLectures = async () => {
-      const d = new Date(date);
-      const dayOfWeek = d.getDay();
+      const [y, m, d] = date.split('-');
+      const dObj = new Date(parseInt(y, 10), parseInt(m, 10) - 1, parseInt(d, 10));
+      const dayOfWeek = dObj.getDay();
 
       let query = supabase
         .from('timetable')
@@ -370,6 +376,7 @@ export default function AttendancePage({
       }
 
       const { data, error } = await query;
+      if (ignore) return;
 
       if (!error && data && data.length > 0) {
         let uniqueLectures = Array.from(new Set(data.map((d) => d.lecture_no))).sort(
@@ -396,7 +403,8 @@ export default function AttendancePage({
     };
 
     fetchValidLectures();
-  }, [date, selectedSubject, selectedDivision, selectedBatch, isPractical]);
+    return () => { ignore = true; };
+  }, [date, selectedSubject, selectedDivision, selectedBatch, isPractical, profile.id, profile.role]);
 
   useEffect(() => {
     const fetchExistingAttendance = async () => {
@@ -742,6 +750,10 @@ export default function AttendancePage({
                   </div>
                 </div>
               </>
+            ) : isFetchingTimetable ? (
+              <div className="flex items-center justify-center py-8">
+                <div className="w-6 h-6 border-[3px] border-ink/10 border-t-ochre rounded-full animate-spin" />
+              </div>
             ) : (
               <div className="bg-cream border border-cream-border text-ink p-4 rounded-xl text-sm font-medium">
                 No lectures scheduled for {selectedSubject} on this date.
@@ -968,9 +980,14 @@ export default function AttendancePage({
 
               <div className="space-y-4">
                 <p className="text-ink-muted text-[0.8125rem] leading-relaxed">
-                  Enter the last digits of roll numbers (e.g. 1, 2, 5), separated by
-                  commas.
+                  Enter the last digits of roll numbers (e.g. 1, 2, 5), separated by commas.
                 </p>
+                <div className="bg-ochre/5 border border-ochre/10 p-3 rounded-xl text-[0.8125rem] text-ink-muted flex items-start gap-2.5">
+                  <Lightbulb className="w-4 h-4 text-ochre shrink-0 mt-0.5" />
+                  <p>
+                    <strong className="text-ink">Tip:</strong> Students are present by default. To only enter present students, click <strong>"All absent"</strong> below first, then mark the present ones!
+                  </p>
+                </div>
                 {quickEntryError && (
                   <div className="bg-rose-50 border border-rose-200/60 p-3 rounded-xl text-sm font-medium text-rose-700 flex items-start gap-2">
                     <UserX className="w-4 h-4 mt-0.5 shrink-0" />
@@ -1012,7 +1029,7 @@ export default function AttendancePage({
                 <div className="flex gap-2">
                   <button
                     onClick={markAllPresent}
-                    className="text-[0.75rem] font-semibold text-ink hover:text-ochre-deep bg-cream hover:bg-cream-soft px-4 py-2 rounded-lg border border-cream-border"
+                    className="text-[0.75rem] font-semibold text-emerald-700 hover:text-emerald-800 bg-emerald-50 hover:bg-emerald-100 px-4 py-2 rounded-lg border border-emerald-200/70"
                   >
                     All present
                   </button>

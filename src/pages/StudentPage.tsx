@@ -262,7 +262,7 @@ export default function StudentPage({
           </div>
 
           <div className="h-64 shrink-0">
-            <AttendanceLogs students={students} compact={true} className="h-full" />
+            <AttendanceLogs students={divisionStudents} compact={true} className="h-full" />
           </div>
         </div>
       )}
