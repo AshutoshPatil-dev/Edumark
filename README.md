@@ -1,70 +1,82 @@
-# EduMark
+<div align="center">
+  <h1>🎓 EduMark</h1>
+  <p><strong>A beautifully considered attendance & ERP system for modern educational institutions.</strong></p>
+  
+  [![React 19](https://img.shields.io/badge/React-19-blue.svg?style=for-the-badge&logo=react)](https://react.dev/)
+  [![TypeScript](https://img.shields.io/badge/TypeScript-5.x-blue.svg?style=for-the-badge&logo=typescript)](https://www.typescriptlang.org/)
+  [![Tailwind CSS](https://img.shields.io/badge/Tailwind-v4-06B6D4.svg?style=for-the-badge&logo=tailwind-css)](https://tailwindcss.com/)
+  [![Supabase](https://img.shields.io/badge/Supabase-DB%20&%20Auth-3ECF8E.svg?style=for-the-badge&logo=supabase)](https://supabase.com/)
+</div>
 
-A considered attendance record system for educational institutions.
-Track attendance across divisions and lectures, review approvals, generate
-academic reports, and monitor student performance — all through a calm,
-editorial interface.
+<br />
 
-## Features
+## 📖 Overview
 
-- Role-based access for administrators, faculty, and class coordinators
-- Daily attendance capture with edit and approval workflows
-- Division, lecture, and subject-level record keeping
-- Automated alerts for missed attendance windows
-- Academic reports with Excel export
-- Secure authentication and session management via Supabase
+**EduMark** is a high-performance, offline-first attendance powerhouse designed with a completely refreshed modern aesthetic. Track attendance across divisions and lectures, review approvals, generate academic reports, broadcast faculty announcements, and monitor student performance — all through a calm, "Paper & Ink" editorial interface.
 
-## Tech Stack
+## ✨ Key Features
 
-- React 19 + TypeScript
-- Vite
-- Tailwind CSS v4
-- Supabase (Auth + Postgres)
-- React Router v7
-- Recharts, date-fns, lucide-react
+- **📶 Offline-First Sync**: Never lose data again. Mark attendance in dead zones and let the app sync automatically when you're back online.
+- **🎨 Premium Atomic UI**: A complete visual overhaul utilizing a standardized atomic design system—crisp, fast, and highly accessible.
+- **📢 Faculty Announcements**: Built-in broadcast system allowing administrators and faculty to seamlessly share critical updates.
+- **🗓️ Visual Timetable Editor**: Interactive editor for faculty to manage their weekly schedules effortlessly.
+- **📱 PWA Ready**: Install EduMark directly on your phone or desktop for a native-app experience.
+- **📄 Advanced Reporting**: Filtered attendance records with one-click PDF/Excel exports for administration.
+- **🛡️ Enhanced Security**: 15-minute auto-logout with "offline-awareness" to keep data safe without locking you out.
 
-## Running locally
+## 🛠️ Tech Stack
 
-**Prerequisites:** Node.js 18 or newer.
+- **Frontend Core**: React 19, TypeScript, Vite
+- **Styling**: Tailwind CSS v4, Atomic Design UI, Motion (Framer Motion)
+- **Backend & Auth**: Supabase (PostgreSQL, Row Level Security)
+- **Routing**: React Router v7
+- **Data Visualization**: Recharts
 
-1. Install dependencies
+## 🚀 Getting Started
+
+### Prerequisites
+- **Node.js** 18.x or newer
+- **npm**
+- A **Supabase** project instance
+
+### Installation
+
+1. **Clone the repository**
+   ```bash
+   git clone https://github.com/AshutoshPatil-dev/Edumark.git
+   cd Edumark
+   ```
+
+2. **Install dependencies**
    ```bash
    npm install
    ```
 
-2. Create a `.env.local` file in the project root and set your Supabase
-   credentials:
-   ```
+3. **Environment Setup**
+   Create a `.env` or `.env.local` file in the root directory and add your Supabase credentials:
+   ```env
    VITE_SUPABASE_URL=your-supabase-url
    VITE_SUPABASE_ANON_KEY=your-supabase-anon-key
    ```
 
-3. Start the development server
+4. **Start the development server**
    ```bash
    npm run dev
    ```
+   *The application will now be running on `http://localhost:3000`.*
 
-The app will be available at `http://localhost:3000`.
+## 📁 Project Architecture
 
-## Scripts
-
-- `npm run dev` — start the Vite dev server
-- `npm run build` — create a production build
-- `npm run preview` — preview the production build
-- `npm run lint` — type-check the project with `tsc`
-
-## Project Structure
-
-```
+```text
 src/
-  components/   Reusable UI (navbar, logo, alerts, logs)
-  pages/        Route-level screens (dashboard, attendance, admin, etc.)
-  lib/          Supabase client
-  utils/        Shared helpers
-  types.ts      Shared TypeScript types
-  constants.ts  Shared constants
+├── components/   # Atomic UI elements (Buttons, Cards, Inputs, Alerts)
+├── pages/        # Route-level screens (Dashboard, Attendance, Admin)
+├── lib/          # Supabase client & third-party integrations
+├── utils/        # Shared helpers and formatting functions
+├── types.ts      # Global TypeScript interfaces and types
+└── constants.ts  # System-wide configuration constants
 ```
 
-## License
+## 📜 License
 
 Proprietary. All rights reserved.
