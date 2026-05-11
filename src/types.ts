@@ -91,7 +91,7 @@ export interface LeaveRequest {
   };
 }
 
-export type AdminLogCategory = 'attendance' | 'student' | 'timetable' | 'teacher' | 'leave';
+export type AdminLogCategory = 'attendance' | 'student' | 'timetable' | 'teacher' | 'leave' | 'notice';
 
 export interface AdminLog {
   id: string;

@@ -1,4 +1,4 @@
-/**
+﻿/**
  * @license
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -52,6 +52,10 @@ const leaveTypeBadge: Record<string, string> = {
   academic: 'bg-ochre/10 text-ochre-deep border-ochre/30',
   other: 'bg-cream text-ink border-cream-border',
 };
+
+function formatLogDetails(parts: Array<string | null | undefined>) {
+  return parts.filter(Boolean).join(' - ');
+}
 
 export default function LeaveRequestsPage({ profile, studentId }: LeaveRequestsPageProps) {
   const isStudentView = profile.role === 'student';
@@ -115,7 +119,12 @@ export default function LeaveRequestsPage({ profile, studentId }: LeaveRequestsP
         profile.id,
         'leave',
         `${action === 'approved' ? 'Approved' : 'Rejected'} leave request`,
-        `${request?.students?.name || 'Unknown'} (${request?.students?.roll_no || 'â€”'}) Â· ${request?.start_date} to ${request?.end_date} Â· ${request?.leave_type}${reviewNote ? ` Â· Note: ${reviewNote}` : ''}`
+        formatLogDetails([
+          `${request?.students?.name || 'Unknown'} (${request?.students?.roll_no || '-'})`,
+          `${request?.start_date} to ${request?.end_date}`,
+          request?.leave_type,
+          reviewNote ? `Note: ${reviewNote}` : null,
+        ])
       );
       setActiveReviewId(null);
       setReviewNote('');
@@ -273,7 +282,7 @@ export default function LeaveRequestsPage({ profile, studentId }: LeaveRequestsP
                 className="bg-ochre hover:bg-ochre-deep text-white font-semibold py-3 px-6 rounded-xl disabled:opacity-50 flex items-center justify-center gap-2"
               >
                 <Send className="w-4 h-4" />
-                <span>{formSubmitting ? 'Submitting…' : 'Submit request'}</span>
+                <span>{formSubmitting ? 'Submitting...' : 'Submit request'}</span>
               </button>
             </form>
           </motion.div>
@@ -356,7 +365,7 @@ export default function LeaveRequestsPage({ profile, studentId }: LeaveRequestsP
                               {request.students?.name || 'Unknown'}
                             </p>
                             <p className="text-[0.6875rem] text-ink-muted mt-0.5">
-                              {request.students?.roll_no || '-'} · Div {request.students?.division || '-'}
+                              {request.students?.roll_no || '-'} - Div {request.students?.division || '-'}
                             </p>
                           </div>
                         </div>
@@ -374,11 +383,11 @@ export default function LeaveRequestsPage({ profile, studentId }: LeaveRequestsP
                       <span className="font-medium">
                         {new Date(request.start_date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
                         {request.start_date !== request.end_date && (
-                          <> → {new Date(request.end_date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}</>
+                          <> to {new Date(request.end_date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}</>
                         )}
                       </span>
                       <span className="text-[0.6875rem] text-ink-muted">
-                        Submitted {new Date(request.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                        Submitted {new Date(request.created_at).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
                       </span>
                     </div>
 

@@ -56,8 +56,12 @@ export default function MissingAttendanceAlert({ students, profile, refreshData 
       // Parse details field to reconstruct comparable log info
       interface ParsedLog { date: string; subject_id: string; division: string; batch?: string; lecture_no?: string; action: string; }
       const logs: ParsedLog[] = (logsData || []).map((r: any) => {
-        // Details format: "SUBJ · Div X · Batch Y · L2 · 2026-04-19"
-        const parts = (r.details || '').split(' · ');
+        // Details format: "SUBJ - Div X - Batch Y - Lecture 2 - 2026-04-19"
+        // Keep backward compatibility with older bullet-separated entries.
+        const details = r.details || '';
+        const parts = details.includes(' - ')
+          ? details.split(' - ')
+          : details.split(' · ');
         const dateStr = parts.find((p: string) => /^\d{4}-\d{2}-\d{2}$/.test(p)) || '';
         const divPart = parts.find((p: string) => p.startsWith('Div '));
         const batchPart = parts.find((p: string) => p.startsWith('Batch '));
@@ -183,7 +187,7 @@ export default function MissingAttendanceAlert({ students, profile, refreshData 
       entry.batch ? `Batch ${entry.batch}` : null,
       `Lecture ${entry.lectureNo}`,
       entry.date,
-    ].filter(Boolean).join(' · ');
+    ].filter(Boolean).join(' - ');
 
     try {
       const { error } = await supabase.from('admin_logs').insert({

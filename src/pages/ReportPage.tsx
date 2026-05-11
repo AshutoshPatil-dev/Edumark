@@ -9,8 +9,6 @@ import type { Student } from '../types';
 import { SUBJECTS, DIVISIONS, type DivisionId } from '../constants';
 import { calculateTWAS, cn } from '../utils/attendance';
 import { motion, AnimatePresence } from 'motion/react';
-import jsPDF from 'jspdf';
-import autoTable from 'jspdf-autotable';
 
 interface ReportPageProps {
   students: Student[];
@@ -100,7 +98,11 @@ export default function ReportPage({ students }: ReportPageProps) {
     document.body.removeChild(link);
   };
 
-  const downloadPDF = (student: any) => {
+  const downloadPDF = async (student: any) => {
+    const [{ default: jsPDF }, { default: autoTable }] = await Promise.all([
+      import('jspdf'),
+      import('jspdf-autotable'),
+    ]);
     const doc = new jsPDF();
     const headers = [['Subject', 'Score (%)', 'Status', 'Total Lectures Recorded']];
     const rows = student.subjectStats.map((s: any) => [
@@ -274,7 +276,7 @@ export default function ReportPage({ students }: ReportPageProps) {
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search reports…"
+                placeholder="Search reports..."
                 className="w-full pl-10 pr-4 py-2.5 bg-card border border-cream-border rounded-xl text-sm focus:outline-none focus:ring-4 focus:ring-ochre/10 focus:border-ochre/60 font-medium text-ink placeholder:text-ink/30"
               />
             </div>
@@ -294,7 +296,7 @@ export default function ReportPage({ students }: ReportPageProps) {
                 className="flex-1 sm:max-w-[160px] px-3 py-2 bg-card border border-cream-border rounded-xl text-sm focus:outline-none focus:ring-4 focus:ring-ochre/10 focus:border-ochre/60 font-medium text-ink"
                 placeholder="From"
               />
-              <span className="text-ink-muted text-sm">→</span>
+              <span className="text-ink-muted text-sm">to</span>
               <input
                 type="date"
                 value={dateTo}
@@ -313,7 +315,7 @@ export default function ReportPage({ students }: ReportPageProps) {
             )}
             {(dateFrom || dateTo) && (
               <span className="text-[0.6875rem] text-ink-muted font-medium px-2 py-1 bg-cream border border-cream-border rounded-lg">
-                {dateFrom || '…'} to {dateTo || '…'}
+                {dateFrom || '...'} to {dateTo || '...'}
               </span>
             )}
           </div>

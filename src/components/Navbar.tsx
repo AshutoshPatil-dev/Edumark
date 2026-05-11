@@ -191,7 +191,7 @@ export default function Navbar({ onLogout, profile }: NavbarProps) {
                   </span>
                   <span className="block text-[0.6875rem] font-medium text-ink-muted uppercase tracking-[0.08em] mt-1">
                     {profile.role}
-                    {profile.roll_no ? ` · ${profile.roll_no}` : ''}
+                    {profile.roll_no ? ` - ${profile.roll_no}` : ''}
                   </span>
                 </div>
                 <div className="w-9 h-9 rounded-full bg-ochre/10 text-ochre-deep flex items-center justify-center font-bold text-[0.8125rem]">
@@ -251,7 +251,7 @@ export default function Navbar({ onLogout, profile }: NavbarProps) {
                   </p>
                   <p className="text-[0.625rem] uppercase tracking-[0.12em] text-ink-muted mt-1.5">
                     {profile.role}
-                    {profile.roll_no ? ` · ${profile.roll_no}` : ''}
+                    {profile.roll_no ? ` - ${profile.roll_no}` : ''}
                   </p>
                 </div>
               </div>
