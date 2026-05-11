@@ -189,8 +189,9 @@ export default function App() {
     }
   }, [isLoggedIn, profile]);
 
-  const handleLogout = async () => {
-    await supabase.auth.signOut();
+  const handleLogout = () => {
+    // Don't await signOut to prevent hanging when offline
+    supabase.auth.signOut().catch(console.error);
     localStorage.removeItem('edumark_last_activity');
     setIsLoggedIn(false);
     setProfile(null);
@@ -202,14 +203,17 @@ export default function App() {
     if (!isLoggedIn) return;
 
     let timeoutId: NodeJS.Timeout;
+    let hasLoggedOut = false;
     const INACTIVITY_LIMIT = 15 * 60 * 1000; // 15 minutes in milliseconds
     const STORAGE_KEY = 'edumark_last_activity';
 
     const checkTimeout = () => {
+      if (hasLoggedOut) return true;
       const lastActivity = localStorage.getItem(STORAGE_KEY);
       if (lastActivity) {
         const elapsed = Date.now() - parseInt(lastActivity, 10);
         if (elapsed >= INACTIVITY_LIMIT) {
+          hasLoggedOut = true;
           handleLogout();
           alert('You have been automatically logged out due to inactivity.');
           return true;
@@ -219,13 +223,15 @@ export default function App() {
     };
 
     const resetTimer = () => {
+      if (hasLoggedOut) return;
       if (checkTimeout()) return;
 
       localStorage.setItem(STORAGE_KEY, Date.now().toString());
       clearTimeout(timeoutId);
       timeoutId = setTimeout(() => {
-        if (!checkTimeout()) {
+        if (!checkTimeout() && !hasLoggedOut) {
           // If checkTimeout didn't log out (e.g. limit changed), force it
+          hasLoggedOut = true;
           handleLogout();
           alert('You have been automatically logged out due to inactivity.');
         }
