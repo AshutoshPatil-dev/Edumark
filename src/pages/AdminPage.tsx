@@ -9,6 +9,9 @@ import {
   Users,
   ClipboardList,
   Filter,
+  Megaphone,
+  ChevronDown,
+  ChevronUp,
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { DIVISIONS, type DivisionId } from '../constants';
@@ -37,6 +40,7 @@ interface AdminPageProps {
 }
 
 export default function AdminPage({ refreshData }: AdminPageProps) {
+  const LOGS_PAGE_SIZE = 100;
   const [mainTab, setMainTab] = useState<'students' | 'timetable' | 'logs'>('students');
   const [studentTab, setStudentTab] = useState<'single' | 'bulk'>('single');
   const [timetableTab, setTimetableTab] = useState<'visual' | 'csv'>('visual');
@@ -51,6 +55,9 @@ export default function AdminPage({ refreshData }: AdminPageProps) {
   const [logs, setLogs] = useState<AdminLog[]>([]);
   const [logCategory, setLogCategory] = useState<AdminLogCategory | 'all'>('all');
   const [isLoadingLogs, setIsLoadingLogs] = useState(false);
+  const [logsPage, setLogsPage] = useState(0);
+  const [hasMoreLogs, setHasMoreLogs] = useState(true);
+  const [expandedLogIds, setExpandedLogIds] = useState<Set<string>>(new Set());
 
   const [isLoading, setIsLoading] = useState(false);
   const [message, setMessage] = useState<{
@@ -58,16 +65,20 @@ export default function AdminPage({ refreshData }: AdminPageProps) {
     text: string;
   } | null>(null);
 
-  const fetchLogs = useCallback(async () => {
+  const fetchLogs = useCallback(async (reset = true, pageOverride?: number) => {
     setIsLoadingLogs(true);
 
     try {
+      const page = typeof pageOverride === 'number' ? pageOverride : 0;
+      const from = page * LOGS_PAGE_SIZE;
+      const to = from + LOGS_PAGE_SIZE - 1;
+
       // Step 1: Fetch logs without join to avoid relationship errors
       let query = supabase
         .from('admin_logs')
         .select('*')
         .order('created_at', { ascending: false })
-        .limit(300);
+        .range(from, to);
 
       if (logCategory !== 'all') {
         query = query.eq('category', logCategory);
@@ -77,7 +88,8 @@ export default function AdminPage({ refreshData }: AdminPageProps) {
       if (logsError) throw logsError;
 
       if (!logsData || logsData.length === 0) {
-        setLogs([]);
+        if (reset) setLogs([]);
+        setHasMoreLogs(false);
         setIsLoadingLogs(false);
         return;
       }
@@ -93,7 +105,7 @@ export default function AdminPage({ refreshData }: AdminPageProps) {
       if (profilesError) {
         console.error('Error fetching profiles for logs:', profilesError);
         // Still show logs even if profile fetch fails
-        setLogs(logsData as AdminLog[]);
+        setLogs((prev) => (reset ? (logsData as AdminLog[]) : [...prev, ...(logsData as AdminLog[])]));
       } else {
         // Merge profiles into logs
         const profileMap = new Map(profilesData?.map(p => [p.id, p.full_name]));
@@ -101,8 +113,10 @@ export default function AdminPage({ refreshData }: AdminPageProps) {
           ...log,
           profiles: { full_name: profileMap.get(log.actor_id) || 'Unknown' }
         }));
-        setLogs(mergedLogs as AdminLog[]);
+        setLogs((prev) => (reset ? (mergedLogs as AdminLog[]) : [...prev, ...(mergedLogs as AdminLog[])]));
       }
+      setLogsPage(page + 1);
+      setHasMoreLogs(logsData.length === LOGS_PAGE_SIZE);
     } catch (err: any) {
       console.error('Failed to fetch activity logs:', err);
       setMessage({ type: 'error', text: 'Failed to load activity logs.' });
@@ -112,8 +126,23 @@ export default function AdminPage({ refreshData }: AdminPageProps) {
   }, [logCategory]);
 
   useEffect(() => {
-    if (mainTab === 'logs') fetchLogs();
-  }, [mainTab, fetchLogs]);
+    if (mainTab === 'logs') {
+      setLogs([]);
+      setLogsPage(0);
+      setHasMoreLogs(true);
+      setExpandedLogIds(new Set());
+      fetchLogs(true);
+    }
+  }, [logCategory, mainTab, fetchLogs]);
+
+  const toggleLogDetails = (id: string) => {
+    setExpandedLogIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
 
   const getCurrentUserId = async (): Promise<string | null> => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -148,7 +177,7 @@ export default function AdminPage({ refreshData }: AdminPageProps) {
       setRollNo('');
       setBatch('');
       await refreshData();
-      if (mainTab === 'logs') fetchLogs(); // Refresh logs if on that tab
+      if (mainTab === 'logs') fetchLogs(true); // Refresh logs if on that tab
     } catch (err: any) {
       setMessage({ type: 'error', text: err.message || 'Failed to add student.' });
     } finally {
@@ -192,7 +221,7 @@ export default function AdminPage({ refreshData }: AdminPageProps) {
       setMessage({ type: 'success', text: `Successfully added ${studentsToInsert.length} students.` });
       setBulkText('');
       await refreshData();
-      if (mainTab === 'logs') fetchLogs();
+      if (mainTab === 'logs') fetchLogs(true);
     } catch (err: any) {
       setMessage({ type: 'error', text: err.message || 'Failed to add students.' });
     } finally {
@@ -226,7 +255,7 @@ export default function AdminPage({ refreshData }: AdminPageProps) {
         if (parts.length < 5) throw new Error(`Invalid format on line ${index + 1}. Expected: Day, Subject, Division, FacultyName, LectureNo, Batch(optional)`);
         const [dayStr, subject, division, facultyName, lectureStr, b] = parts;
         const day = parseInt(dayStr, 10);
-        if (isNaN(day) || day < 1 || day > 5) throw new Error(`Invalid day "${dayStr}" on line ${index + 1}. Must be 1-5.`);
+        if (isNaN(day) || day < 1 || day > 6) throw new Error(`Invalid day "${dayStr}" on line ${index + 1}. Must be 1-6.`);
         const lectureNo = parseInt(lectureStr, 10);
         if (isNaN(lectureNo) || lectureNo < 1) throw new Error(`Invalid lecture number "${lectureStr}" on line ${index + 1}.`);
         let facultyId = profileMap.get(facultyName.toLowerCase());
@@ -251,7 +280,7 @@ export default function AdminPage({ refreshData }: AdminPageProps) {
 
       setMessage({ type: 'success', text: `Successfully added ${timetableToInsert.length} timetable entries.` });
       setTimetableCSV('');
-      if (mainTab === 'logs') fetchLogs();
+      if (mainTab === 'logs') fetchLogs(true);
     } catch (err: any) {
       setMessage({ type: 'error', text: err.message || 'Failed to add timetable.' });
     } finally {
@@ -270,7 +299,7 @@ export default function AdminPage({ refreshData }: AdminPageProps) {
     { id: 'attendance', label: 'Attendance', icon: CheckCircle2 },
     { id: 'student', label: 'Students', icon: Users },
     { id: 'timetable', label: 'Timetable', icon: Calendar },
-    { id: 'teacher', label: 'Teachers', icon: UserPlus },
+    { id: 'notice', label: 'Notices', icon: Megaphone },
     { id: 'leave', label: 'Leaves', icon: FileText },
   ];
 
@@ -278,6 +307,7 @@ export default function AdminPage({ refreshData }: AdminPageProps) {
     attendance: 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 border-emerald-200',
     student: 'bg-sky-50 dark:bg-sky-900/20 text-sky-700 border-sky-200',
     timetable: 'bg-violet-50 dark:bg-violet-900/20 text-violet-700 border-violet-200',
+    notice: 'bg-fuchsia-50 dark:bg-fuchsia-900/20 text-fuchsia-700 border-fuchsia-200',
     teacher: 'bg-amber-50 dark:bg-amber-900/20 text-amber-700 border-amber-200',
     leave: 'bg-cyan-50 dark:bg-cyan-900/20 text-cyan-700 border-cyan-200',
   };
@@ -497,7 +527,7 @@ export default function AdminPage({ refreshData }: AdminPageProps) {
             <div className="space-y-1.5">
               <label className="eyebrow block">CSV data</label>
               <p className="text-[0.75rem] text-ink-muted mb-2">
-                Format: <code className="font-mono bg-cream px-1.5 py-0.5 rounded">Day, Subject, Division, FacultyName, LectureNo, Batch</code>. Day is 1 (Monday) through 5 (Friday). Batch is optional.
+                Format: <code className="font-mono bg-cream px-1.5 py-0.5 rounded">Day, Subject, Division, FacultyName, LectureNo, Batch</code>. Day is 1 (Monday) through 6 (Saturday). Batch is optional.
               </p>
               <textarea required value={timetableCSV} onChange={(e) => setTimetableCSV(e.target.value)} rows={10} className="w-full px-4 py-3 bg-paper border border-cream-border rounded-xl focus:outline-none focus:ring-4 focus:ring-ochre/10 focus:border-ochre/60 font-mono text-sm text-ink" placeholder={"1, DEIC, C, unknown, 2, \n3, AC, A, unknown, 1, F1"} />
             </div>
@@ -548,12 +578,53 @@ export default function AdminPage({ refreshData }: AdminPageProps) {
                           </span>
                         </td>
                         <td className="px-4 py-3 font-medium text-ink">{log.action}</td>
-                        <td className="px-4 py-3 text-ink-muted max-w-[280px] truncate">{log.details || '-'}</td>
+                        <td className="px-4 py-3 text-ink-muted max-w-[420px] align-top">
+                          <div className="space-y-1">
+                            <p
+                              className={cn(
+                                'whitespace-normal break-words',
+                                !expandedLogIds.has(log.id) && 'max-h-10 overflow-hidden',
+                              )}
+                              title={log.details || '-'}
+                            >
+                              {log.details || '-'}
+                            </p>
+                            {log.details && log.details.length > 120 && (
+                              <button
+                                onClick={() => toggleLogDetails(log.id)}
+                                className="inline-flex items-center gap-1 text-[0.7rem] font-semibold text-ochre-deep hover:text-ochre"
+                              >
+                                {expandedLogIds.has(log.id) ? (
+                                  <>
+                                    <ChevronUp className="w-3 h-3" />
+                                    Show less
+                                  </>
+                                ) : (
+                                  <>
+                                    <ChevronDown className="w-3 h-3" />
+                                    Show more
+                                  </>
+                                )}
+                              </button>
+                            )}
+                          </div>
+                        </td>
                       </tr>
                     ))
                   )}
                 </tbody>
               </table>
+              {hasMoreLogs && logs.length > 0 && (
+                <div className="flex justify-center pt-5">
+                  <button
+                    onClick={() => fetchLogs(false, logsPage)}
+                    disabled={isLoadingLogs}
+                    className="px-4 py-2 rounded-xl border border-cream-border bg-paper hover:bg-cream text-ink text-sm font-semibold disabled:opacity-50"
+                  >
+                    {isLoadingLogs ? 'Loading...' : `Load more (${LOGS_PAGE_SIZE})`}
+                  </button>
+                </div>
+              )}
             </div>
           )
         )}

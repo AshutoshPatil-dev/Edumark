@@ -1,8 +1,9 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import { Student } from '../types';
-import { Filter, Calendar, Clock, User, CheckCircle2, XCircle } from 'lucide-react';
+import { Filter, Calendar, Clock, User, CheckCircle2, XCircle, ChevronDown } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { cn } from '../utils/attendance';
+import { AnimatePresence, motion } from 'motion/react';
 
 interface AttendanceLogsProps {
   students: Student[];
@@ -26,6 +27,23 @@ export function AttendanceLogs({ students, studentId, className, compact = false
   const [filterStatus, setFilterStatus] = useState<'all' | 'present' | 'absent'>('all');
   const [filterSubject, setFilterSubject] = useState<string>('all');
   const [profiles, setProfiles] = useState<Record<string, string>>({});
+  const [isStatusDropdownOpen, setIsStatusDropdownOpen] = useState(false);
+  const [isSubjectDropdownOpen, setIsSubjectDropdownOpen] = useState(false);
+  const statusDropdownRef = useRef<HTMLDivElement>(null);
+  const subjectDropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleOutsideClick(event: MouseEvent) {
+      if (statusDropdownRef.current && !statusDropdownRef.current.contains(event.target as Node)) {
+        setIsStatusDropdownOpen(false);
+      }
+      if (subjectDropdownRef.current && !subjectDropdownRef.current.contains(event.target as Node)) {
+        setIsSubjectDropdownOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleOutsideClick);
+    return () => document.removeEventListener('mousedown', handleOutsideClick);
+  }, []);
 
   useEffect(() => {
     const fetchProfiles = async () => {
@@ -87,6 +105,12 @@ export function AttendanceLogs({ students, studentId, className, compact = false
     return Array.from(subjects).sort();
   }, [logs]);
 
+  const statusLabelMap: Record<'all' | 'present' | 'absent', string> = {
+    all: 'All status',
+    present: 'Present',
+    absent: 'Absent',
+  };
+
   return (
     <div className={cn("bg-card rounded-3xl border border-cream-border flex flex-col overflow-hidden", className)}>
       <div className="px-4 py-3.5 border-b border-cream-border flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -96,27 +120,108 @@ export function AttendanceLogs({ students, studentId, className, compact = false
         </div>
 
         <div className="flex items-center gap-2 text-[0.8125rem]">
-          <select
-            value={filterStatus}
-            onChange={(e) => setFilterStatus(e.target.value as any)}
-            className="bg-paper border border-cream-border text-ink rounded-lg px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-ochre/20 font-medium"
-          >
-            <option value="all">All status</option>
-            <option value="present">Present</option>
-            <option value="absent">Absent</option>
-          </select>
+          <div className="relative" ref={statusDropdownRef}>
+            <button
+              onClick={() => setIsStatusDropdownOpen(!isStatusDropdownOpen)}
+              className={cn(
+                'min-w-[112px] flex items-center justify-between gap-2 bg-paper border rounded-lg px-3 py-1.5 font-medium text-ink transition-all',
+                isStatusDropdownOpen
+                  ? 'border-ochre ring-4 ring-ochre/10'
+                  : 'border-cream-border hover:border-ochre/50',
+              )}
+            >
+              <span>{statusLabelMap[filterStatus]}</span>
+              <ChevronDown className={cn('w-3.5 h-3.5 text-ink/40 transition-transform', isStatusDropdownOpen && 'rotate-180')} />
+            </button>
+            <AnimatePresence>
+              {isStatusDropdownOpen && (
+                <motion.div
+                  initial={{ opacity: 0, y: 8, scale: 0.98 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: 8, scale: 0.98 }}
+                  transition={{ duration: 0.15, ease: 'easeOut' }}
+                  className="absolute right-0 top-full z-50 mt-2 min-w-[148px] py-2 bg-card border border-cream-border rounded-xl shadow-[0_20px_40px_-15px_rgba(0,0,0,0.12)] overflow-hidden"
+                >
+                  {(['all', 'present', 'absent'] as const).map((status) => (
+                    <button
+                      key={status}
+                      onClick={() => {
+                        setFilterStatus(status);
+                        setIsStatusDropdownOpen(false);
+                      }}
+                      className={cn(
+                        'w-full text-left px-4 py-2.5 text-[0.8125rem] font-medium transition-colors',
+                        filterStatus === status
+                          ? 'bg-ochre/10 text-ochre-deep'
+                          : 'text-ink hover:bg-cream-soft',
+                      )}
+                    >
+                      {statusLabelMap[status]}
+                    </button>
+                  ))}
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
 
           {!compact && (
-            <select
-              value={filterSubject}
-              onChange={(e) => setFilterSubject(e.target.value)}
-              className="bg-paper border border-cream-border text-ink rounded-lg px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-ochre/20 max-w-[120px] font-medium"
-            >
-              <option value="all">All subjects</option>
-              {uniqueSubjects.map(sub => (
-                <option key={sub} value={sub}>{sub}</option>
-              ))}
-            </select>
+            <div className="relative" ref={subjectDropdownRef}>
+              <button
+                onClick={() => setIsSubjectDropdownOpen(!isSubjectDropdownOpen)}
+                className={cn(
+                  'min-w-[132px] max-w-[170px] flex items-center justify-between gap-2 bg-paper border rounded-lg px-3 py-1.5 font-medium text-ink transition-all',
+                  isSubjectDropdownOpen
+                    ? 'border-ochre ring-4 ring-ochre/10'
+                    : 'border-cream-border hover:border-ochre/50',
+                )}
+              >
+                <span className="truncate">{filterSubject === 'all' ? 'All subjects' : filterSubject}</span>
+                <ChevronDown className={cn('w-3.5 h-3.5 text-ink/40 transition-transform shrink-0', isSubjectDropdownOpen && 'rotate-180')} />
+              </button>
+              <AnimatePresence>
+                {isSubjectDropdownOpen && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 8, scale: 0.98 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: 8, scale: 0.98 }}
+                    transition={{ duration: 0.15, ease: 'easeOut' }}
+                    className="absolute right-0 top-full z-50 mt-2 min-w-[180px] max-h-56 overflow-y-auto py-2 bg-card border border-cream-border rounded-xl shadow-[0_20px_40px_-15px_rgba(0,0,0,0.12)]"
+                  >
+                    <button
+                      onClick={() => {
+                        setFilterSubject('all');
+                        setIsSubjectDropdownOpen(false);
+                      }}
+                      className={cn(
+                        'w-full text-left px-4 py-2.5 text-[0.8125rem] font-medium transition-colors',
+                        filterSubject === 'all'
+                          ? 'bg-ochre/10 text-ochre-deep'
+                          : 'text-ink hover:bg-cream-soft',
+                      )}
+                    >
+                      All subjects
+                    </button>
+                    {uniqueSubjects.map((sub) => (
+                      <button
+                        key={sub}
+                        onClick={() => {
+                          setFilterSubject(sub);
+                          setIsSubjectDropdownOpen(false);
+                        }}
+                        className={cn(
+                          'w-full text-left px-4 py-2.5 text-[0.8125rem] font-medium transition-colors',
+                          filterSubject === sub
+                            ? 'bg-ochre/10 text-ochre-deep'
+                            : 'text-ink hover:bg-cream-soft',
+                        )}
+                      >
+                        {sub}
+                      </button>
+                    ))}
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
           )}
         </div>
       </div>

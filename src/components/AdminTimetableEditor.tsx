@@ -5,15 +5,36 @@ import { Calendar, Plus, Edit2, Trash2, Info } from 'lucide-react';
 import { cn, getCorrectBatchesForDivision } from '../utils/attendance';
 import { writeAdminLog } from '../utils/admin';
 
+interface ProfileOption {
+  id: string;
+  full_name: string | null;
+}
+
+interface TimetableSlot {
+  id: string;
+  day_of_week: number;
+  lecture_no: number;
+  subject_id: string;
+  faculty_id: string;
+  division: string;
+  batch: string | null;
+}
+
+interface EditingSlot {
+  day: number;
+  lectureNo: number;
+  id?: string;
+}
+
 export default function AdminTimetableEditor() {
   const [selectedDivision, setSelectedDivision] = useState<DivisionId>('A');
-  const [timetable, setTimetable] = useState<any[]>([]);
-  const [profiles, setProfiles] = useState<any[]>([]);
+  const [timetable, setTimetable] = useState<TimetableSlot[]>([]);
+  const [profiles, setProfiles] = useState<ProfileOption[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingSlot, setEditingSlot] = useState<{ day: number; lectureNo: number; id?: string } | null>(null);
+  const [editingSlot, setEditingSlot] = useState<EditingSlot | null>(null);
   const [formSubject, setFormSubject] = useState('');
   const [formFaculty, setFormFaculty] = useState('');
   const [formBatch, setFormBatch] = useState('');
@@ -37,7 +58,7 @@ export default function AdminTimetableEditor() {
     setIsLoading(false);
   };
 
-  const handleCellClick = (day: number, lectureNo: number, existingSlot?: any) => {
+  const handleCellClick = (day: number, lectureNo: number, existingSlot?: TimetableSlot) => {
     if (existingSlot) {
       setEditingSlot({ day, lectureNo, id: existingSlot.id });
       setFormSubject(existingSlot.subject_id);

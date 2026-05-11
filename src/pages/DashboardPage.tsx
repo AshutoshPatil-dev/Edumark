@@ -25,7 +25,7 @@ import {
 } from 'recharts';
 import { Link } from 'react-router-dom';
 import type { Student } from '../types';
-import { calculateTWAS, getStatusColor } from '../utils/attendance';
+import { calculateTWAS } from '../utils/attendance';
 import { DIVISIONS, type DivisionId } from '../constants';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '../utils/attendance';
@@ -401,7 +401,7 @@ export default function DashboardPage({ students }: DashboardPageProps) {
                         {student.name}
                       </p>
                       <p className="text-[0.6875rem] text-ink-muted mt-0.5">
-                        {student.rollNo} · Div {student.division}
+                        {student.rollNo} - Div {student.division}
                       </p>
                     </div>
                   </div>
@@ -435,9 +435,6 @@ export default function DashboardPage({ students }: DashboardPageProps) {
           </div>
         </motion.div>
       </div>
-
-      {/* Unused import guard - retained for potential expansion */}
-      <span className="sr-only">{getStatusColor('Excellent')}</span>
     </div>
   );
 }

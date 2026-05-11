@@ -1,9 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, type FormEvent } from 'react';
 import { Megaphone, FileText, Calendar, Plus, Filter, Users, Tag, AlertCircle, CheckCircle2, Clock, X } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import type { Profile, Student, Announcement, AnnouncementType } from '../types';
 import { SUBJECTS, DIVISIONS } from '../constants';
 import { getCorrectBatchesForDivision } from '../utils/attendance';
+import { writeAdminLog } from '../utils/admin';
 
 interface AnnouncementsPageProps {
   profile: Profile;
@@ -18,7 +19,7 @@ export default function AnnouncementsPage({ profile, students }: AnnouncementsPa
   // Filter state for students and faculty
   const [filterType, setFilterType] = useState<'all' | 'announcement' | 'assignment'>('all');
   const [filterSubject, setFilterSubject] = useState<string>(
-    profile.role === 'faculty' ? 'my_subjects' : 'all'
+    'all'
   );
   
   // Form state for faculty
@@ -36,7 +37,9 @@ export default function AnnouncementsPage({ profile, students }: AnnouncementsPa
 
   // Computed batches based on selected divisions, or all if none selected
   const relevantDivisions = formData.target_divisions.length > 0 ? formData.target_divisions : DIVISIONS;
-  const BATCHES = Array.from(new Set(relevantDivisions.flatMap(div => getCorrectBatchesForDivision(div))));
+  const BATCHES: string[] = Array.from(
+    new Set(relevantDivisions.flatMap((div) => getCorrectBatchesForDivision(div))),
+  );
 
   const studentData = profile.role === 'student' 
     ? students.find(s => s.rollNo === profile.roll_no)
@@ -121,7 +124,7 @@ export default function AnnouncementsPage({ profile, students }: AnnouncementsPa
     }));
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     if (!formData.title || !formData.content) return;
     
@@ -145,6 +148,13 @@ export default function AnnouncementsPage({ profile, students }: AnnouncementsPa
 
       if (insertError) throw insertError;
 
+      await writeAdminLog(
+        profile.id,
+        'notice',
+        formData.type === 'assignment' ? 'Posted assignment' : 'Posted notice',
+        `${formData.subject_id} | ${formData.title}`,
+      );
+
       setIsFormOpen(false);
       setFormData({
         title: '',
@@ -167,8 +177,15 @@ export default function AnnouncementsPage({ profile, students }: AnnouncementsPa
   const handleDelete = async (id: string) => {
     if (!window.confirm('Are you sure you want to delete this?')) return;
     try {
+      const target = announcements.find((a) => a.id === id);
       const { error } = await supabase.from('announcements').delete().eq('id', id);
       if (error) throw error;
+      await writeAdminLog(
+        profile.id,
+        'notice',
+        'Deleted notice',
+        target ? `${target.subject_id} | ${target.title}` : id,
+      );
       setAnnouncements(prev => prev.filter(a => a.id !== id));
     } catch (err) {
       console.error('Error deleting:', err);

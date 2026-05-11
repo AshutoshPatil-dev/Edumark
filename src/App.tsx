@@ -3,11 +3,6 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-/**
- * @license
- * SPDX-License-Identifier: Apache-2.0
- */
-
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { useState, useEffect, lazy, Suspense } from 'react';
 import { AlertCircle } from 'lucide-react';
@@ -37,8 +32,6 @@ export default function App() {
 
   const fetchProfile = async (userId: string) => {
     setProfileError(null);
-    
-    console.log('Checking profile for userId:', userId);
     
     // First try to fetch a faculty profile
     const { data: profileData, error: profileError } = await supabase
@@ -189,8 +182,9 @@ export default function App() {
     }
   }, [isLoggedIn, profile]);
 
-  const handleLogout = async () => {
-    await supabase.auth.signOut();
+  const handleLogout = () => {
+    // Don't await signOut to prevent hanging when offline
+    supabase.auth.signOut().catch(console.error);
     localStorage.removeItem('edumark_last_activity');
     setIsLoggedIn(false);
     setProfile(null);
@@ -201,15 +195,18 @@ export default function App() {
   useEffect(() => {
     if (!isLoggedIn) return;
 
-    let timeoutId: NodeJS.Timeout;
+    let timeoutId: ReturnType<typeof setTimeout>;
+    let hasLoggedOut = false;
     const INACTIVITY_LIMIT = 15 * 60 * 1000; // 15 minutes in milliseconds
     const STORAGE_KEY = 'edumark_last_activity';
 
     const checkTimeout = () => {
+      if (hasLoggedOut) return true;
       const lastActivity = localStorage.getItem(STORAGE_KEY);
       if (lastActivity) {
         const elapsed = Date.now() - parseInt(lastActivity, 10);
         if (elapsed >= INACTIVITY_LIMIT) {
+          hasLoggedOut = true;
           handleLogout();
           alert('You have been automatically logged out due to inactivity.');
           return true;
@@ -219,13 +216,15 @@ export default function App() {
     };
 
     const resetTimer = () => {
+      if (hasLoggedOut) return;
       if (checkTimeout()) return;
 
       localStorage.setItem(STORAGE_KEY, Date.now().toString());
       clearTimeout(timeoutId);
       timeoutId = setTimeout(() => {
-        if (!checkTimeout()) {
+        if (!checkTimeout() && !hasLoggedOut) {
           // If checkTimeout didn't log out (e.g. limit changed), force it
+          hasLoggedOut = true;
           handleLogout();
           alert('You have been automatically logged out due to inactivity.');
         }

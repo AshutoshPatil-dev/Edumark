@@ -33,6 +33,56 @@ interface AttendancePageProps {
   profile: Profile;
 }
 
+function getSubjectVariants(subject: string): string[] {
+  if (subject === 'DEIC') return ['DEIC', 'DEIC-T'];
+  if (subject === 'DEIC-T') return ['DEIC-T', 'DEIC'];
+  return [subject];
+}
+
+async function resolveTimetableSubject({
+  date,
+  selectedSubject,
+  selectedDivision,
+  lectureNo,
+  selectedBatch,
+  isPractical,
+  profile,
+}: {
+  date: string;
+  selectedSubject: SubjectId;
+  selectedDivision: DivisionId;
+  lectureNo: number;
+  selectedBatch: string;
+  isPractical: boolean;
+  profile: Profile;
+}) {
+  const [y, m, d] = date.split('-');
+  const dObj = new Date(parseInt(y, 10), parseInt(m, 10) - 1, parseInt(d, 10));
+  const dayOfWeek = dObj.getDay();
+
+  let query = supabase
+    .from('timetable')
+    .select('subject_id')
+    .eq('day_of_week', dayOfWeek)
+    .in('subject_id', getSubjectVariants(selectedSubject))
+    .eq('division', selectedDivision)
+    .eq('lecture_no', lectureNo)
+    .limit(1);
+
+  if (profile.role !== 'admin') {
+    query = query.eq('faculty_id', profile.id);
+  }
+
+  if (isPractical && selectedBatch) {
+    query = query.eq('batch', selectedBatch);
+  } else if (!isPractical) {
+    query = query.is('batch', null);
+  }
+
+  const { data } = await query;
+  return (data?.[0]?.subject_id as SubjectId | undefined) || selectedSubject;
+}
+
 export default function AttendancePage({
   students,
   refreshData,
@@ -44,10 +94,10 @@ export default function AttendancePage({
   const availableSubjects =
     profile.role === 'admin'
       ? SUBJECTS
-      : SUBJECTS.filter(
-        (sub) =>
-          profile.assigned_subjects.includes(sub) ||
-          (sub === 'DEIC-T' && profile.assigned_subjects.includes('DEIC')),
+      : SUBJECTS.filter((sub) =>
+        getSubjectVariants(sub).some((variant) =>
+          profile.assigned_subjects.includes(variant),
+        ),
       );
 
   const initialSubject = searchParams.get('subject') as SubjectId;
@@ -274,7 +324,7 @@ export default function AttendancePage({
         .from('timetable')
         .select('division')
         .eq('day_of_week', dayOfWeek)
-        .eq('subject_id', selectedSubject);
+        .in('subject_id', getSubjectVariants(selectedSubject));
 
       if (profile.role !== 'admin') {
         query = query.eq('faculty_id', profile.id);
@@ -317,7 +367,7 @@ export default function AttendancePage({
         .from('timetable')
         .select('batch')
         .eq('day_of_week', dayOfWeek)
-        .eq('subject_id', selectedSubject)
+        .in('subject_id', getSubjectVariants(selectedSubject))
         .eq('division', selectedDivision)
         .not('batch', 'is', null);
 
@@ -360,9 +410,9 @@ export default function AttendancePage({
 
       let query = supabase
         .from('timetable')
-        .select('lecture_no')
+        .select('lecture_no, subject_id')
         .eq('day_of_week', dayOfWeek)
-        .eq('subject_id', selectedSubject)
+        .in('subject_id', getSubjectVariants(selectedSubject))
         .eq('division', selectedDivision);
 
       if (profile.role !== 'admin') {
@@ -407,14 +457,29 @@ export default function AttendancePage({
   }, [date, selectedSubject, selectedDivision, selectedBatch, isPractical, profile.id, profile.role]);
 
   useEffect(() => {
+    let ignore = false;
+
     const fetchExistingAttendance = async () => {
       setIsLoadingAttendance(true);
+      const subjectToFetch = await resolveTimetableSubject({
+        date,
+        selectedSubject,
+        selectedDivision,
+        lectureNo,
+        selectedBatch,
+        isPractical,
+        profile,
+      });
+      if (ignore) return;
+
       const { data, error } = await supabase
         .from('attendance')
         .select('student_id, status, remark')
         .eq('date', date)
-        .eq('subject', selectedSubject)
+        .eq('subject', subjectToFetch)
         .eq('lecture_no', lectureNo);
+
+      if (ignore) return;
 
       if (!error && data) {
         const absentees = new Set<string>();
@@ -439,7 +504,8 @@ export default function AttendancePage({
     };
 
     fetchExistingAttendance();
-  }, [date, selectedSubject, lectureNo]);
+    return () => { ignore = true; };
+  }, [date, selectedSubject, selectedDivision, lectureNo, selectedBatch, isPractical, profile]);
 
   const toggleAbsentee = (id: string) => {
     const newAbsentees = new Set(absenteeIds);
@@ -469,11 +535,21 @@ export default function AttendancePage({
         (!selectedBatch || s.batch === selectedBatch),
     );
 
+    const subjectToSave = await resolveTimetableSubject({
+      date,
+      selectedSubject,
+      selectedDivision,
+      lectureNo,
+      selectedBatch,
+      isPractical,
+      profile,
+    });
+
     const recordsToUpsert = studentsToSave.map((student) => {
       const isAbsent = absenteeIds.has(student.id);
       return {
         student_id: student.id,
-        subject: selectedSubject,
+        subject: subjectToSave,
         date,
         lecture_no: lectureNo,
         status: isAbsent ? 0 : 1,
@@ -486,7 +562,6 @@ export default function AttendancePage({
       await addToQueue('attendance', recordsToUpsert);
       setInitialAbsenteeIds(new Set(absenteeIds));
       setInitialRemarks({ ...remarks });
-      setIsOfflineSaved(true);
       setShowSuccess(true);
       setJustSaved(true);
       setTimeout(() => setJustSaved(false), 300);
@@ -507,7 +582,7 @@ export default function AttendancePage({
         actor_id: profile.id,
         category: 'attendance',
         action: 'Marked attendance',
-        details: `${selectedSubject} · Div ${selectedDivision}${selectedBatch ? ` Batch ${selectedBatch}` : ''} · Lecture ${lectureNo} · ${date} · ${absenteeIds.size} absent`,
+        details: `${subjectToSave} - Div ${selectedDivision}${selectedBatch ? ` Batch ${selectedBatch}` : ''} - Lecture ${lectureNo} - ${date} - ${absenteeIds.size} absent`,
       });
       await refreshData();
       setShowSuccess(true);
@@ -555,7 +630,7 @@ export default function AttendancePage({
             ) : (
               <Save className="w-4 h-4" />
             )}
-            <span>{isSaving ? 'Saving…' : 'Save attendance'}</span>
+            <span>{isSaving ? 'Saving...' : 'Save attendance'}</span>
           </button>
         </div>
         <div className="rule-paper" />
@@ -744,7 +819,7 @@ export default function AttendancePage({
                             : 'bg-paper text-ink border-cream-border hover:border-ochre/50',
                         )}
                       >
-                        {isPractical ? `${num}–${num + 1}` : num}
+                        {isPractical ? `${num}-${num + 1}` : num}
                       </button>
                     ))}
                   </div>
@@ -756,7 +831,7 @@ export default function AttendancePage({
               </div>
             ) : (
               <div className="bg-cream border border-cream-border text-ink p-4 rounded-xl text-sm font-medium">
-                No lectures scheduled for {selectedSubject} on this date.
+                No lectures scheduled for {selectedSubject} on this date, or this slot is assigned to another faculty.
               </div>
             )}
           </div>
@@ -790,7 +865,7 @@ export default function AttendancePage({
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-[18px] h-[18px] text-ink/40 group-focus-within:text-ochre" />
             <input
               type="text"
-              placeholder="Search by name or roll number…"
+              placeholder="Search by name or roll number..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full pl-12 pr-4 py-4 bg-card border border-cream-border rounded-2xl focus:outline-none focus:ring-4 focus:ring-ochre/10 focus:border-ochre/60 font-medium text-ink placeholder:text-ink/30"
@@ -1048,3 +1123,4 @@ export default function AttendancePage({
     </div>
   );
 }
+
